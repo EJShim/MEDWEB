@@ -7,6 +7,8 @@ app.set('view engine', 'ejs');
 app.engine('html', require('ejs').renderFile);
 app.use(express.static('public'));
 
-var server = app.listen(8080, function(){
+var port = process.env.PORT || 8080;
+
+var server = app.listen(port, function(){
     console.log("Express server has started on port 8080")
 });
