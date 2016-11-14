@@ -125,11 +125,11 @@ E_Manager.prototype.Redraw = function()
     renderer[i].pointLight.position.set(camera.position.x, camera.position.y, camera.position.z );
   }
 
-  this.Render();
-
   //Emit scene
   var data = {pos:renderer[0].camera.position, look:renderer[0].control.target};
   var socket = this.SocketMgr().socket.emit("scene",data);
+
+  this.Render();
 }
 
 E_Manager.prototype.Render = function()
