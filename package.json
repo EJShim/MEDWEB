@@ -17,6 +17,7 @@
     "url": "https://github.com/EJShim/ejshim.git"
   },
   "scripts": {
-    "build": "browserify core/MainFrm.js -o public/app.js"
+    "build": "browserify core/MainFrm.js -o public/app.js",
+    "start": "sudo npm start server.js"
   }
 }
