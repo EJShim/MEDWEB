@@ -2,7 +2,6 @@
 //Define Header
 var E_Manager = require("./Manager/E_Manager.js");
 
-
 //Initialize Manager
 var Manager = new E_Manager();
 Manager.Initialize();
@@ -78,24 +77,23 @@ $$("ID_VIEW_TREE").attachEvent("onItemCheck", function(id){
 
   var checkState = this.isChecked(id);
   Manager.MeshMgr().ShowHide(id, checkState);
-
-})
+});
 
 $$("ID_VIEW_TREE").attachEvent("onItemClick", function(id){
   //this.select(id);
   Manager.MeshMgr().SetSelectedMesh(id);
-})
+});
 
 $$("ID_VIEW_TREE").attachEvent("onItemDblClick", function(){
   console.log("Item DBlClicked");
-})
+});
 
 $$("ID_VIEW_TREE").attachEvent("onKeyPress", function(code, e){
 
   if(e.key == "Backspace"){
     Manager.MeshMgr().RemoveMesh();
   }
-})
+});
 
 },{"./Manager/E_Manager.js":2}],2:[function(require,module,exports){
 var THREE = require("three");
@@ -103,6 +101,7 @@ var TrackballControls = require('three-trackballcontrols');
 
 var E_MeshManager = require("./E_MeshManager.js");
 var E_VolumeManager = require("./E_VolumeManager.js");
+var E_SocketManager = require("./E_SocketManager.js");
 
 
 function E_Manager()
@@ -121,6 +120,7 @@ function E_Manager()
   //Mesh Manager
   var m_meshManager = new E_MeshManager(this);
   var m_volumeManager = new E_VolumeManager(this);
+  var m_socketManager = new E_SocketManager(this);
 
   this.GetRenderer = function(idx){
     if(idx == null) return m_renderer;
@@ -138,6 +138,10 @@ function E_Manager()
 
   this.VolumeMgr = function(){
     return m_volumeManager;
+  }
+
+  this.SocketMgr = function(){
+    return m_socketManager;
   }
 }
 
@@ -286,7 +290,7 @@ E_Manager.prototype.ResetTreeItems = function()
 }
 module.exports = E_Manager;
 
-},{"./E_MeshManager.js":3,"./E_VolumeManager.js":4,"three":8,"three-trackballcontrols":6}],3:[function(require,module,exports){
+},{"./E_MeshManager.js":3,"./E_SocketManager.js":4,"./E_VolumeManager.js":5,"three":9,"three-trackballcontrols":7}],3:[function(require,module,exports){
 var THREE = require("three");
 var STLLoader = require('three-stl-loader')(THREE);
 
@@ -396,7 +400,16 @@ E_MeshManager.prototype.GetCenter = function(mesh)
 
 module.exports = E_MeshManager;
 
-},{"three":8,"three-stl-loader":5}],4:[function(require,module,exports){
+},{"three":9,"three-stl-loader":6}],4:[function(require,module,exports){
+function E_SocketManager(Mgr)
+{
+  this.Mgr = Mgr;
+  this.socket = io();
+}
+
+module.exports = E_SocketManager;
+
+},{}],5:[function(require,module,exports){
 function E_VolumeManager(Mgr)
 {
   this.Mgr = Mgr;
@@ -405,7 +418,7 @@ function E_VolumeManager(Mgr)
 
 module.exports = E_VolumeManager;
 
-},{}],5:[function(require,module,exports){
+},{}],6:[function(require,module,exports){
 /**
  * @author aleeper / http://adamleeper.com/
  * @author mrdoob / http://mrdoob.com/
@@ -903,7 +916,7 @@ module.exports = E_VolumeManager;
 
  }
 
-},{}],6:[function(require,module,exports){
+},{}],7:[function(require,module,exports){
 /**
  * @author Eberhard Graether / http://egraether.com/
  * @author Mark Lundin 	/ http://mark-lundin.com
@@ -1545,7 +1558,7 @@ function preventEvent( event ) { event.preventDefault(); }
 
 TrackballControls.prototype = Object.create( THREE.EventDispatcher.prototype );
 
-},{"three":7}],7:[function(require,module,exports){
+},{"three":8}],8:[function(require,module,exports){
 var self = self || {};// File:src/Three.js
 
 /**
@@ -42115,7 +42128,7 @@ if (typeof exports !== 'undefined') {
   this['THREE'] = THREE;
 }
 
-},{}],8:[function(require,module,exports){
+},{}],9:[function(require,module,exports){
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
 	typeof define === 'function' && define.amd ? define(['exports'], factory) :

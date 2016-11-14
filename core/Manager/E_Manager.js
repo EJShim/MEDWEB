@@ -3,6 +3,7 @@ var TrackballControls = require('three-trackballcontrols');
 
 var E_MeshManager = require("./E_MeshManager.js");
 var E_VolumeManager = require("./E_VolumeManager.js");
+var E_SocketManager = require("./E_SocketManager.js");
 
 
 function E_Manager()
@@ -21,6 +22,7 @@ function E_Manager()
   //Mesh Manager
   var m_meshManager = new E_MeshManager(this);
   var m_volumeManager = new E_VolumeManager(this);
+  var m_socketManager = new E_SocketManager(this);
 
   this.GetRenderer = function(idx){
     if(idx == null) return m_renderer;
@@ -38,6 +40,10 @@ function E_Manager()
 
   this.VolumeMgr = function(){
     return m_volumeManager;
+  }
+
+  this.SocketMgr = function(){
+    return m_socketManager;
   }
 }
 

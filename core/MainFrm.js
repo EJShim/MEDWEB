@@ -1,7 +1,6 @@
 //Define Header
 var E_Manager = require("./Manager/E_Manager.js");
 
-
 //Initialize Manager
 var Manager = new E_Manager();
 Manager.Initialize();

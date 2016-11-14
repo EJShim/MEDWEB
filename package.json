@@ -4,6 +4,7 @@
   "dependencies": {
     "ejs": "~2.4.1",
     "express": "~4.13.1",
+    "socket.io": "^1.5.1",
     "three": "^0.82.1",
     "three-stl-loader": "^1.0.4",
     "three-trackballcontrols": "0.0.5"
