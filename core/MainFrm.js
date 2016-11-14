@@ -77,21 +77,20 @@ $$("ID_VIEW_TREE").attachEvent("onItemCheck", function(id){
 
   var checkState = this.isChecked(id);
   Manager.MeshMgr().ShowHide(id, checkState);
-
-})
+});
 
 $$("ID_VIEW_TREE").attachEvent("onItemClick", function(id){
   //this.select(id);
   Manager.MeshMgr().SetSelectedMesh(id);
-})
+});
 
 $$("ID_VIEW_TREE").attachEvent("onItemDblClick", function(){
   console.log("Item DBlClicked");
-})
+});
 
 $$("ID_VIEW_TREE").attachEvent("onKeyPress", function(code, e){
 
   if(e.key == "Backspace"){
     Manager.MeshMgr().RemoveMesh();
   }
-})
+});
