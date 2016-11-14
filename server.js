@@ -22,4 +22,8 @@ server.listen(port, function(){
 
 io.on('connection', function(socket){
   console.log('a user connected');
+
+  socket.on("scene", function(data){
+    io.emit("scene", data);
+  });
 });

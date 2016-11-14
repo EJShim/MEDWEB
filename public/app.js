@@ -195,7 +195,7 @@ E_Manager.prototype.Initialize = function()
   var geometry = new THREE.BoxGeometry( 1, 1, 1 );
   var material = new THREE.MeshPhongMaterial({color:0xff0000, shading:THREE.SmoothShading, shininess:5, specular:0xaaaaaa});
   var cube = new THREE.Mesh( geometry, material );
-  renderer[1].scene.add( cube );
+  renderer[0].scene.add( cube );
   renderer[2].scene.add( cube.clone() );
 
   //Redraw
@@ -222,6 +222,17 @@ E_Manager.prototype.Redraw = function()
     var camera = renderer[i].camera;
     renderer[i].pointLight.position.set(camera.position.x, camera.position.y, camera.position.z );
   }
+
+  this.Render();
+
+  //Emit scene
+  var data = {pos:renderer[0].camera.position, look:renderer[0].control.target};
+  var socket = this.SocketMgr().socket.emit("scene",data);
+}
+
+E_Manager.prototype.Render = function()
+{
+  var renderer = this.GetRenderer();
 
   //Render
   for(var i in renderer){
@@ -405,6 +416,14 @@ function E_SocketManager(Mgr)
 {
   this.Mgr = Mgr;
   this.socket = io();
+
+  this.socket.on("scene", function(data){
+    ///TEST Socket Interaction
+    var renderer = Mgr.GetRenderer();
+    renderer[0].camera.position.set(data.pos.x, data.pos.y, data.pos.z);
+
+    Mgr.Render();
+  })
 }
 
 module.exports = E_SocketManager;
