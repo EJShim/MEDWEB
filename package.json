@@ -18,6 +18,6 @@
   },
   "scripts": {
     "build": "browserify core/MainFrm.js -o public/app.js",
-    "start": "sudo node server.js"
+    "start": "node server.js"
   }
 }
