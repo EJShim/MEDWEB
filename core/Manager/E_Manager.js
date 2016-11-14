@@ -13,6 +13,7 @@ function E_Manager()
   this.VIEW_2D_AXL = 1;
   this.VIEW_2D_COR = 2;
   this.VIEW_2D_SAG = 3;
+
   //Renderer
   var m_renderer = [];
 

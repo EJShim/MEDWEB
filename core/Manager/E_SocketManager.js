@@ -7,6 +7,7 @@ function E_SocketManager(Mgr)
     ///TEST Socket Interaction
     var renderer = Mgr.GetRenderer();
     renderer[0].camera.position.set(data.pos.x, data.pos.y, data.pos.z);
+    //renderer[0].control.update();
 
     Mgr.Render();
   })

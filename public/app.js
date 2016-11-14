@@ -111,6 +111,7 @@ function E_Manager()
   this.VIEW_2D_AXL = 1;
   this.VIEW_2D_COR = 2;
   this.VIEW_2D_SAG = 3;
+
   //Renderer
   var m_renderer = [];
 
@@ -421,6 +422,7 @@ function E_SocketManager(Mgr)
     ///TEST Socket Interaction
     var renderer = Mgr.GetRenderer();
     renderer[0].camera.position.set(data.pos.x, data.pos.y, data.pos.z);
+    //renderer[0].control.update();
 
     Mgr.Render();
   })
