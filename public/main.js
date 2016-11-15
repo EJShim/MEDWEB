@@ -31,7 +31,7 @@ elements:[
   { label:"Height", type:"text", id:"height"},
         { label:"Password", type:"password", id:"pass"},
   { label:"Data loading", type:"label" },
-  { label:"Data url", type:"text", id:"url", value:"http://webix.com/data"},
+  { label:"Data url", type:"text", id:"url", value:"http://soulrommel.cafe24.com"},
         { label:"Type", type:"select", options:["json","xml","csv"], id:"type"},
         { label:"Position", type:"select", options:position_options, id:"position"},
         { label:"Date", type:"date", id:"date", format:webix.i18n.dateFormatStr},
@@ -39,6 +39,16 @@ elements:[
   { label:"Use JSONP", type:"checkbox", id:"jsonp"}
 ]
 };
+
+
+var chat_module = [
+                    { view:"textarea", id:"ID_CHAT_RESULT", scroll:"y" },
+              			{ margin:5, cols:[
+                      { view:"text", id:"ID_CHAT_USER",value:'User' },
+                			{ view:"text", id:"ID_CHAT_INPUT", value:'Chat Here', gravity:5.0},
+              				{ view:"button", value:"Submit" , type:"form" },
+              			]}
+              		];
 
 
 ////MainFrm
@@ -83,8 +93,14 @@ webix.ui({
 
               {view:"resizer"},
               {
-                //Footer
-                id:"ID_VIEW_FOOTER", template:"Log Area", height:100
+                id:"ID_VIEW_FOOTER",
+                gravity:0.2,
+                cols:[
+                    {view:"form", elements:chat_module, gravity:2.0},
+                    {view:"resizer"},
+                    {id:"ID_VIEW_LOG", template:"Log Area"}
+                ]
+
               }
 
           ]

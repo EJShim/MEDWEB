@@ -93,3 +93,18 @@ $$("ID_VIEW_TREE").attachEvent("onKeyPress", function(code, e){
     Manager.MeshMgr().RemoveMesh();
   }
 });
+
+
+
+
+///Chat module
+$$("ID_CHAT_INPUT").attachEvent("onKeyPress", function(code, e){
+  if(e.key == "Enter"){
+
+    ///Clear Form
+    Manager.SocketMgr().EmitData("SOCKET_CHAT", this.getValue());
+
+    //Clear
+    this.setValue("");
+  }
+});

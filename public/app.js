@@ -95,6 +95,21 @@ $$("ID_VIEW_TREE").attachEvent("onKeyPress", function(code, e){
   }
 });
 
+
+
+
+///Chat module
+$$("ID_CHAT_INPUT").attachEvent("onKeyPress", function(code, e){
+  if(e.key == "Enter"){
+
+    ///Clear Form
+    Manager.SocketMgr().EmitData("SOCKET_CHAT", this.getValue());
+
+    //Clear
+    this.setValue("");
+  }
+});
+
 },{"./Manager/E_Manager.js":2}],2:[function(require,module,exports){
 var THREE = require("three");
 var TrackballControls = require('three-trackballcontrols');
@@ -418,7 +433,28 @@ function E_SocketManager(Mgr)
   this.Mgr = Mgr;
   this.socket = io();
 
-  this.socket.on("scene", function(data){
+  this.Initialize();
+}
+
+E_SocketManager.prototype.Initialize = function()
+{
+  this.HandleSignal();
+}
+
+E_SocketManager.prototype.EmitData = function(signal, data)
+{
+  var socket = this.socket;
+
+  socket.emit(signal, data);
+}
+
+E_SocketManager.prototype.HandleSignal = function()
+{
+  var socket = this.socket;
+  var Mgr = this.Mgr;
+
+
+  socket.on("scene", function(data){
     ///TEST Socket Interaction
     var renderer = Mgr.GetRenderer();
     renderer[0].camera.position.set(data.pos.x, data.pos.y, data.pos.z);
@@ -426,6 +462,11 @@ function E_SocketManager(Mgr)
 
     Mgr.Render();
   })
+
+  socket.on("SOCKET_CHAT", function(data){
+    var val = $$("ID_CHAT_RESULT").getValue() + "\n" + data;
+    $$("ID_CHAT_RESULT").setValue(val);
+  });
 }
 
 module.exports = E_SocketManager;
