@@ -26,7 +26,6 @@ E_SocketManager.prototype.HandleSignal = function()
 
   socket.on("SIGNAL_JOIN", function(data){
     var val = $$("ID_CHAT_RESULT").getValue() + "\n" + data + " is joined";
-    $$("ID_CHAT_USER").setValue(data);
     $$("ID_CHAT_RESULT").setValue(val);
   });
 
