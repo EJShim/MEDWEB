@@ -73,7 +73,7 @@ E_Manager.prototype.Initialize = function()
     renderer[i].camera = new THREE.PerspectiveCamera( 45, renWin[i].$width/renWin[i].$height, 0.1, 10000000000 );
     renderer[i].camera.position.set(0, 0, -20);
     renderer[i].camera.lookAt(new THREE.Vector3(0, 0, 0));
-    renderer[i].setClearColor(0x00000a);
+    renderer[i].setClearColor(0x00004a);
 
     //Attach to the Viewport
     renWin[i].getNode().replaceChild(renderer[i].domElement, renWin[i].$view.childNodes[0] );
@@ -116,21 +116,26 @@ E_Manager.prototype.Animate = function()
 
 E_Manager.prototype.Redraw = function()
 {
+  this.UpdateCamera();
+}
+
+E_Manager.prototype.UpdateCamera = function()
+{
   //Get Renderer and viewport
   var renderer = this.GetRenderer();
 
   //Set PointLight of Main VIEW_MAIN
   for(var i in renderer)
   {
-    var camera = renderer[i].camera;
-    renderer[i].pointLight.position.set(camera.position.x, camera.position.y, camera.position.z );
+    renderer[i].pointLight.position.set( renderer[i].camera.position.x, renderer[i].camera.position.y, renderer[i].camera.position.z );
   }
 
-  //Emit scene
-  var data = {pos:renderer[0].camera.position, look:renderer[0].control.target};
-  var socket = this.SocketMgr().socket.emit("scene",data);
 
-  this.Render();
+  //Emit scene
+  var camera = renderer[0].camera;
+  var data = {pos:camera.position};
+  this.SocketMgr().EmitData("SIGNAL_SCENE", data);
+
 }
 
 E_Manager.prototype.Render = function()
@@ -168,7 +173,7 @@ E_Manager.prototype.OnResize = function()
 {
   this.UpdateWindowSize();
 
-  this.Redraw();
+  this.Render();
 }
 
 E_Manager.prototype.UpdateWindowSize = function()

@@ -102,11 +102,15 @@ $$("ID_VIEW_TREE").attachEvent("onKeyPress", function(code, e){
 $$("ID_CHAT_INPUT").attachEvent("onKeyPress", function(code, e){
   if(e.key == "Enter"){
 
+    var userData = $$("ID_CHAT_USER").getValue();
+    var valueData = this.getValue();
+
+    var data = {user:userData, value:valueData};
     ///Clear Form
-    Manager.SocketMgr().EmitData("SOCKET_CHAT", this.getValue());
+    Manager.SocketMgr().EmitData("SIGNAL_CHAT", data);
 
     //Clear
-    this.setValue("");
+    ///this.setValue("");
   }
 });
 
@@ -186,7 +190,7 @@ E_Manager.prototype.Initialize = function()
     renderer[i].camera = new THREE.PerspectiveCamera( 45, renWin[i].$width/renWin[i].$height, 0.1, 10000000000 );
     renderer[i].camera.position.set(0, 0, -20);
     renderer[i].camera.lookAt(new THREE.Vector3(0, 0, 0));
-    renderer[i].setClearColor(0x00000a);
+    renderer[i].setClearColor(0x00004a);
 
     //Attach to the Viewport
     renWin[i].getNode().replaceChild(renderer[i].domElement, renWin[i].$view.childNodes[0] );
@@ -229,21 +233,26 @@ E_Manager.prototype.Animate = function()
 
 E_Manager.prototype.Redraw = function()
 {
+  this.UpdateCamera();
+}
+
+E_Manager.prototype.UpdateCamera = function()
+{
   //Get Renderer and viewport
   var renderer = this.GetRenderer();
 
   //Set PointLight of Main VIEW_MAIN
   for(var i in renderer)
   {
-    var camera = renderer[i].camera;
-    renderer[i].pointLight.position.set(camera.position.x, camera.position.y, camera.position.z );
+    renderer[i].pointLight.position.set( renderer[i].camera.position.x, renderer[i].camera.position.y, renderer[i].camera.position.z );
   }
 
-  //Emit scene
-  var data = {pos:renderer[0].camera.position, look:renderer[0].control.target};
-  var socket = this.SocketMgr().socket.emit("scene",data);
 
-  this.Render();
+  //Emit scene
+  var camera = renderer[0].camera;
+  var data = {pos:camera.position};
+  this.SocketMgr().EmitData("SIGNAL_SCENE", data);
+
 }
 
 E_Manager.prototype.Render = function()
@@ -281,7 +290,7 @@ E_Manager.prototype.OnResize = function()
 {
   this.UpdateWindowSize();
 
-  this.Redraw();
+  this.Render();
 }
 
 E_Manager.prototype.UpdateWindowSize = function()
@@ -365,7 +374,7 @@ E_MeshManager.prototype.AddMesh = function(mesh)
   this.Mgr.ResetTreeItems();
 
   this.Mgr.ResetCamera();
-  this.Mgr.Redraw();
+  this.Mgr.Render();
 }
 
 E_MeshManager.prototype.ShowHide = function(id, show)
@@ -382,7 +391,7 @@ E_MeshManager.prototype.ShowHide = function(id, show)
     //Update Tree
   }
 
-  this.Mgr.Redraw();
+  this.Mgr.Render();
 }
 
 E_MeshManager.prototype.RemoveMesh = function(){
@@ -428,6 +437,8 @@ E_MeshManager.prototype.GetCenter = function(mesh)
 module.exports = E_MeshManager;
 
 },{"three":9,"three-stl-loader":6}],4:[function(require,module,exports){
+var THREE = require("three");
+
 function E_SocketManager(Mgr)
 {
   this.Mgr = Mgr;
@@ -444,7 +455,6 @@ E_SocketManager.prototype.Initialize = function()
 E_SocketManager.prototype.EmitData = function(signal, data)
 {
   var socket = this.socket;
-
   socket.emit(signal, data);
 }
 
@@ -453,25 +463,52 @@ E_SocketManager.prototype.HandleSignal = function()
   var socket = this.socket;
   var Mgr = this.Mgr;
 
+  socket.on("SIGNAL_JOIN", function(data){
+    var val = $$("ID_CHAT_RESULT").getValue() + "\n" + data + " is joined";
+    $$("ID_CHAT_USER").setValue(data);
+    $$("ID_CHAT_RESULT").setValue(val);
+  });
 
-  socket.on("scene", function(data){
-    ///TEST Socket Interaction
+  socket.on("SIGNAL_JOIN_CALLBACK", function(data){
+    $$("ID_CHAT_USER").setValue(data);
+    $$("ID_CHAT_RESULT").setValue(data + " is joined");
+  });
+
+
+  socket.on("SIGNAL_SCENE", function(data){
+
     var renderer = Mgr.GetRenderer();
     renderer[0].camera.position.set(data.pos.x, data.pos.y, data.pos.z);
-    //renderer[0].control.update();
 
     Mgr.Render();
-  })
+  });
 
-  socket.on("SOCKET_CHAT", function(data){
-    var val = $$("ID_CHAT_RESULT").getValue() + "\n" + data;
+  socket.on("SIGNAL_SCENE_CALLBACK", function(data){
+    Mgr.Render();
+  });
+
+
+
+  socket.on("SIGNAL_CHAT", function(data){
+
+    var val = $$("ID_CHAT_RESULT").getValue() + "\n" + data.user + " : " + data.value;
     $$("ID_CHAT_RESULT").setValue(val);
+  });
+
+  socket.on("SIGNAL_CHAT_CALLBACK", function(data){
+
+    var val = $$("ID_CHAT_RESULT").getValue() + "\n" + data.user + " : " + data.value;
+    $$("ID_CHAT_RESULT").setValue(val);
+
+    console.log($$("ID_CHAT_RESULT").getNode());
+    //Clear
+    $$("ID_CHAT_INPUT").setValue("");
   });
 }
 
 module.exports = E_SocketManager;
 
-},{}],5:[function(require,module,exports){
+},{"three":9}],5:[function(require,module,exports){
 function E_VolumeManager(Mgr)
 {
   this.Mgr = Mgr;

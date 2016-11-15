@@ -45,7 +45,7 @@ E_MeshManager.prototype.AddMesh = function(mesh)
   this.Mgr.ResetTreeItems();
 
   this.Mgr.ResetCamera();
-  this.Mgr.Redraw();
+  this.Mgr.Render();
 }
 
 E_MeshManager.prototype.ShowHide = function(id, show)
@@ -62,7 +62,7 @@ E_MeshManager.prototype.ShowHide = function(id, show)
     //Update Tree
   }
 
-  this.Mgr.Redraw();
+  this.Mgr.Render();
 }
 
 E_MeshManager.prototype.RemoveMesh = function(){

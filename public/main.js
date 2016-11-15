@@ -44,8 +44,8 @@ elements:[
 var chat_module = [
                     { view:"textarea", id:"ID_CHAT_RESULT", scroll:"y" },
               			{ margin:5, cols:[
-                      { view:"text", id:"ID_CHAT_USER",value:'User' },
-                			{ view:"text", id:"ID_CHAT_INPUT", value:'Chat Here', gravity:5.0},
+                      { view:"text", id:"ID_CHAT_USER",value:'Username' },
+                			{ view:"text", id:"ID_CHAT_INPUT", gravity:5.0},
               				{ view:"button", value:"Submit" , type:"form" },
               			]}
               		];

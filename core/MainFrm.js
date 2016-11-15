@@ -101,10 +101,14 @@ $$("ID_VIEW_TREE").attachEvent("onKeyPress", function(code, e){
 $$("ID_CHAT_INPUT").attachEvent("onKeyPress", function(code, e){
   if(e.key == "Enter"){
 
+    var userData = $$("ID_CHAT_USER").getValue();
+    var valueData = this.getValue();
+
+    var data = {user:userData, value:valueData};
     ///Clear Form
-    Manager.SocketMgr().EmitData("SOCKET_CHAT", this.getValue());
+    Manager.SocketMgr().EmitData("SIGNAL_CHAT", data);
 
     //Clear
-    this.setValue("");
+    ///this.setValue("");
   }
 });
