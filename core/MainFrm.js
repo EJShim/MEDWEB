@@ -58,6 +58,7 @@ $$("ID_BUTTON_IMPORT_MESH").attachEvent("onItemClick", function(){
 
         //Import Mesh
         Manager.MeshMgr().ImportMesh(path, name);
+        URL.revokeObjectURL(path);
     }
 
     //Remove File Dialog Element

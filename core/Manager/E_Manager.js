@@ -101,7 +101,7 @@ E_Manager.prototype.Initialize = function()
   this.UpdateWindowSize();
 
   //Initialize Test Mesh
-  var geometry = new THREE.BoxGeometry( 1, 1, 1 );
+  var geometry = new THREE.BoxGeometry( 10, 10, 10 );
   var material = new THREE.MeshPhongMaterial({color:0xff0000, shading:THREE.SmoothShading, shininess:5, specular:0xaaaaaa});
   var cube = new THREE.Mesh( geometry, material );
   renderer[0].scene.add( cube );

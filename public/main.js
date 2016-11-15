@@ -98,7 +98,7 @@ webix.ui({
                 cols:[
                     {view:"form", elements:chat_module, gravity:2.0},
                     {view:"resizer"},
-                    {id:"ID_VIEW_LOG", template:"Log Area"}
+                    {view:"list", id:"ID_VIEW_LOG", template:"Log Area"}
                 ]
 
               }
