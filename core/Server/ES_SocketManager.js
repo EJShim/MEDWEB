@@ -46,9 +46,6 @@ ES_SocketManager.prototype.HandleSignal = function()
 
 ES_SocketManager.prototype.HandleCamera = function(socket, data)
 {
-  //console.log(data);
-
-  socket.emit("SIGNAL_SCENE_CALLBACK", null);
   socket.broadcast.emit("SIGNAL_SCENE", data);
 }
 

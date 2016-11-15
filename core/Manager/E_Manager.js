@@ -4,6 +4,7 @@ var TrackballControls = require('three-trackballcontrols');
 var E_MeshManager = require("./E_MeshManager.js");
 var E_VolumeManager = require("./E_VolumeManager.js");
 var E_SocketManager = require("./E_SocketManager.js");
+var E_Interactor = require("./E_Interactor.js");
 
 
 function E_Manager()
@@ -13,6 +14,7 @@ function E_Manager()
   this.VIEW_2D_AXL = 1;
   this.VIEW_2D_COR = 2;
   this.VIEW_2D_SAG = 3;
+
 
   //Renderer
   var m_renderer = [];
@@ -89,6 +91,10 @@ E_Manager.prototype.Initialize = function()
     renderer[i].control.dynamicDampingFactor = 0.3;
     renderer[i].control.keys = [ 65, 83, 68 ];
     renderer[i].control.addEventListener( 'change', this.Redraw.bind(this) );
+
+    //Initialize Interactor
+    renderer[i].interactor = new E_Interactor(this, renderer[i]);
+
   }
 
   //Initialize Renderer Size
@@ -107,16 +113,17 @@ E_Manager.prototype.Initialize = function()
 
 E_Manager.prototype.Animate = function()
 {
+
   for(var i=0 ; i<this.NUM_VIEW ; i++){
     this.GetRenderer(i).control.update();
   }
-
   requestAnimationFrame( this.Animate.bind(this) );
 }
 
 E_Manager.prototype.Redraw = function()
 {
   this.UpdateCamera();
+  this.Render();
 }
 
 E_Manager.prototype.UpdateCamera = function()
@@ -130,12 +137,8 @@ E_Manager.prototype.UpdateCamera = function()
     renderer[i].pointLight.position.set( renderer[i].camera.position.x, renderer[i].camera.position.y, renderer[i].camera.position.z );
   }
 
-
   //Emit scene
-  var camera = renderer[0].camera;
-  var data = {pos:camera.position};
-  this.SocketMgr().EmitData("SIGNAL_SCENE", data);
-
+  var data = renderer[0].control.object.position;
 }
 
 E_Manager.prototype.Render = function()
@@ -173,7 +176,7 @@ E_Manager.prototype.OnResize = function()
 {
   this.UpdateWindowSize();
 
-  this.Render();
+  this.Redraw();
 }
 
 E_Manager.prototype.UpdateWindowSize = function()
@@ -207,4 +210,13 @@ E_Manager.prototype.ResetTreeItems = function()
     tree.checkItem(i);
   }
 }
+
+E_Manager.prototype.UploadScene = function()
+{
+  var control = this.GetRenderer(this.VIEW_MAIN).control;
+  var camera = control.object;
+  var data = {pos:camera.position, rot:camera.rotation, up:camera.up, tar:control.target};
+  this.SocketMgr().EmitData("SIGNAL_SCENE", data);
+}
+
 module.exports = E_Manager;

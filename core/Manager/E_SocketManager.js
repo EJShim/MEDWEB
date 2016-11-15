@@ -36,17 +36,13 @@ E_SocketManager.prototype.HandleSignal = function()
 
 
   socket.on("SIGNAL_SCENE", function(data){
-
     var renderer = Mgr.GetRenderer();
     renderer[0].camera.position.set(data.pos.x, data.pos.y, data.pos.z);
+    renderer[0].camera.rotation.set(data.rot.x, data.rot.y, data.rot.z);
+    renderer[0].camera.up.set(data.up.x, data.up.y, data.up.z);
+    renderer[0].control.target.set(data.tar.x, data.tar.y, data.tar.z);
 
-    Mgr.Render();
   });
-
-  socket.on("SIGNAL_SCENE_CALLBACK", function(data){
-    Mgr.Render();
-  });
-
 
 
   socket.on("SIGNAL_CHAT", function(data){
@@ -60,7 +56,6 @@ E_SocketManager.prototype.HandleSignal = function()
     var val = $$("ID_CHAT_RESULT").getValue() + "\n" + data.user + " : " + data.value;
     $$("ID_CHAT_RESULT").setValue(val);
 
-    console.log($$("ID_CHAT_RESULT").getNode());
     //Clear
     $$("ID_CHAT_INPUT").setValue("");
   });

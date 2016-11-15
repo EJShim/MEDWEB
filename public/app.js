@@ -114,13 +114,61 @@ $$("ID_CHAT_INPUT").attachEvent("onKeyPress", function(code, e){
   }
 });
 
-},{"./Manager/E_Manager.js":2}],2:[function(require,module,exports){
+},{"./Manager/E_Manager.js":3}],2:[function(require,module,exports){
+function E_Interactor(Mgr, renderer)
+{
+  this.Mgr = Mgr;
+  this.renderer = renderer
+
+  this.m_bMouseDown = false;
+
+  this.Initialize();
+}
+
+E_Interactor.prototype.Initialize = function()
+{
+  //Add Event Listner
+  var canvas = this.renderer.domElement;
+
+  canvas.addEventListener('mousewheel', this.OnMouseWheel.bind(this), false);
+  canvas.addEventListener('mousedown', this.OnMouseDown.bind(this), false );
+  canvas.addEventListener('mouseup', this.OnMouseUp.bind(this), false );
+  canvas.addEventListener('mousemove', this.OnMouseMove.bind(this), false );
+}
+
+E_Interactor.prototype.OnMouseDown = function()
+{
+  this.m_bMouseDown = true;
+}
+
+E_Interactor.prototype.OnMouseUp = function()
+{
+  this.m_bMouseDown = false;
+}
+
+
+E_Interactor.prototype.OnMouseMove = function()
+{
+  if(this.m_bMouseDown){
+    this.Mgr.UploadScene();
+  }
+}
+
+E_Interactor.prototype.OnMouseWheel = function()
+{
+  this.Mgr.UploadScene();
+}
+
+module.exports = E_Interactor;
+
+},{}],3:[function(require,module,exports){
 var THREE = require("three");
 var TrackballControls = require('three-trackballcontrols');
 
 var E_MeshManager = require("./E_MeshManager.js");
 var E_VolumeManager = require("./E_VolumeManager.js");
 var E_SocketManager = require("./E_SocketManager.js");
+var E_Interactor = require("./E_Interactor.js");
 
 
 function E_Manager()
@@ -130,6 +178,7 @@ function E_Manager()
   this.VIEW_2D_AXL = 1;
   this.VIEW_2D_COR = 2;
   this.VIEW_2D_SAG = 3;
+
 
   //Renderer
   var m_renderer = [];
@@ -206,6 +255,10 @@ E_Manager.prototype.Initialize = function()
     renderer[i].control.dynamicDampingFactor = 0.3;
     renderer[i].control.keys = [ 65, 83, 68 ];
     renderer[i].control.addEventListener( 'change', this.Redraw.bind(this) );
+
+    //Initialize Interactor
+    renderer[i].interactor = new E_Interactor(this, renderer[i]);
+
   }
 
   //Initialize Renderer Size
@@ -224,16 +277,17 @@ E_Manager.prototype.Initialize = function()
 
 E_Manager.prototype.Animate = function()
 {
+
   for(var i=0 ; i<this.NUM_VIEW ; i++){
     this.GetRenderer(i).control.update();
   }
-
   requestAnimationFrame( this.Animate.bind(this) );
 }
 
 E_Manager.prototype.Redraw = function()
 {
   this.UpdateCamera();
+  this.Render();
 }
 
 E_Manager.prototype.UpdateCamera = function()
@@ -247,12 +301,8 @@ E_Manager.prototype.UpdateCamera = function()
     renderer[i].pointLight.position.set( renderer[i].camera.position.x, renderer[i].camera.position.y, renderer[i].camera.position.z );
   }
 
-
   //Emit scene
-  var camera = renderer[0].camera;
-  var data = {pos:camera.position};
-  this.SocketMgr().EmitData("SIGNAL_SCENE", data);
-
+  var data = renderer[0].control.object.position;
 }
 
 E_Manager.prototype.Render = function()
@@ -290,7 +340,7 @@ E_Manager.prototype.OnResize = function()
 {
   this.UpdateWindowSize();
 
-  this.Render();
+  this.Redraw();
 }
 
 E_Manager.prototype.UpdateWindowSize = function()
@@ -324,9 +374,18 @@ E_Manager.prototype.ResetTreeItems = function()
     tree.checkItem(i);
   }
 }
+
+E_Manager.prototype.UploadScene = function()
+{
+  var control = this.GetRenderer(this.VIEW_MAIN).control;
+  var camera = control.object;
+  var data = {pos:camera.position, rot:camera.rotation, up:camera.up, tar:control.target};
+  this.SocketMgr().EmitData("SIGNAL_SCENE", data);
+}
+
 module.exports = E_Manager;
 
-},{"./E_MeshManager.js":3,"./E_SocketManager.js":4,"./E_VolumeManager.js":5,"three":9,"three-trackballcontrols":7}],3:[function(require,module,exports){
+},{"./E_Interactor.js":2,"./E_MeshManager.js":4,"./E_SocketManager.js":5,"./E_VolumeManager.js":6,"three":10,"three-trackballcontrols":8}],4:[function(require,module,exports){
 var THREE = require("three");
 var STLLoader = require('three-stl-loader')(THREE);
 
@@ -374,7 +433,7 @@ E_MeshManager.prototype.AddMesh = function(mesh)
   this.Mgr.ResetTreeItems();
 
   this.Mgr.ResetCamera();
-  this.Mgr.Render();
+  this.Mgr.Redraw();
 }
 
 E_MeshManager.prototype.ShowHide = function(id, show)
@@ -391,7 +450,7 @@ E_MeshManager.prototype.ShowHide = function(id, show)
     //Update Tree
   }
 
-  this.Mgr.Render();
+  this.Mgr.Redraw();
 }
 
 E_MeshManager.prototype.RemoveMesh = function(){
@@ -436,7 +495,7 @@ E_MeshManager.prototype.GetCenter = function(mesh)
 
 module.exports = E_MeshManager;
 
-},{"three":9,"three-stl-loader":6}],4:[function(require,module,exports){
+},{"three":10,"three-stl-loader":7}],5:[function(require,module,exports){
 var THREE = require("three");
 
 function E_SocketManager(Mgr)
@@ -475,17 +534,13 @@ E_SocketManager.prototype.HandleSignal = function()
 
 
   socket.on("SIGNAL_SCENE", function(data){
-
     var renderer = Mgr.GetRenderer();
     renderer[0].camera.position.set(data.pos.x, data.pos.y, data.pos.z);
+    renderer[0].camera.rotation.set(data.rot.x, data.rot.y, data.rot.z);
+    renderer[0].camera.up.set(data.up.x, data.up.y, data.up.z);
+    renderer[0].control.target.set(data.tar.x, data.tar.y, data.tar.z);
 
-    Mgr.Render();
   });
-
-  socket.on("SIGNAL_SCENE_CALLBACK", function(data){
-    Mgr.Render();
-  });
-
 
 
   socket.on("SIGNAL_CHAT", function(data){
@@ -499,7 +554,6 @@ E_SocketManager.prototype.HandleSignal = function()
     var val = $$("ID_CHAT_RESULT").getValue() + "\n" + data.user + " : " + data.value;
     $$("ID_CHAT_RESULT").setValue(val);
 
-    console.log($$("ID_CHAT_RESULT").getNode());
     //Clear
     $$("ID_CHAT_INPUT").setValue("");
   });
@@ -507,7 +561,7 @@ E_SocketManager.prototype.HandleSignal = function()
 
 module.exports = E_SocketManager;
 
-},{"three":9}],5:[function(require,module,exports){
+},{"three":10}],6:[function(require,module,exports){
 function E_VolumeManager(Mgr)
 {
   this.Mgr = Mgr;
@@ -516,7 +570,7 @@ function E_VolumeManager(Mgr)
 
 module.exports = E_VolumeManager;
 
-},{}],6:[function(require,module,exports){
+},{}],7:[function(require,module,exports){
 /**
  * @author aleeper / http://adamleeper.com/
  * @author mrdoob / http://mrdoob.com/
@@ -1014,7 +1068,7 @@ module.exports = E_VolumeManager;
 
  }
 
-},{}],7:[function(require,module,exports){
+},{}],8:[function(require,module,exports){
 /**
  * @author Eberhard Graether / http://egraether.com/
  * @author Mark Lundin 	/ http://mark-lundin.com
@@ -1656,7 +1710,7 @@ function preventEvent( event ) { event.preventDefault(); }
 
 TrackballControls.prototype = Object.create( THREE.EventDispatcher.prototype );
 
-},{"three":8}],8:[function(require,module,exports){
+},{"three":9}],9:[function(require,module,exports){
 var self = self || {};// File:src/Three.js
 
 /**
@@ -42226,7 +42280,7 @@ if (typeof exports !== 'undefined') {
   this['THREE'] = THREE;
 }
 
-},{}],9:[function(require,module,exports){
+},{}],10:[function(require,module,exports){
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
 	typeof define === 'function' && define.amd ? define(['exports'], factory) :
