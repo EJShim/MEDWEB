@@ -17,6 +17,11 @@ E_Interactor.prototype.Initialize = function()
   canvas.addEventListener('mousedown', this.OnMouseDown.bind(this), false );
   canvas.addEventListener('mouseup', this.OnMouseUp.bind(this), false );
   canvas.addEventListener('mousemove', this.OnMouseMove.bind(this), false );
+
+
+  canvas.removeEventListener( 'touchstart', this.OnMouseDown.bind(this), false );
+  canvas.removeEventListener( 'touchend', this.OnMouseUp.bind(this), false );
+  canvas.removeEventListener( 'touchmove', this.OnMouseMove.bind(this), false );
 }
 
 E_Interactor.prototype.OnMouseDown = function()
