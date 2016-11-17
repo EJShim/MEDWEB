@@ -285,6 +285,14 @@ function E_MeshManager(Mgr)
   this.m_selectedMeshIdx = -1;
 }
 
+E_MeshManager.prototype.InitMeshList = function(list)
+{
+  console.log(list);
+  for(var i in list){
+    this.ImportMesh("./workingdata/" + list[i], list[i]);
+  }
+}
+
 E_MeshManager.prototype.ImportMesh = function(path, name)
 {
   //Extract Geometry From the Path
@@ -324,7 +332,7 @@ E_MeshManager.prototype.AddMesh = function(mesh)
   this.Mgr.Redraw();
 }
 
-E_MeshManager.prototype.ToggleTreeCheckState = function(id, show)
+E_MeshManager.prototype.BroadcastCheckState = function(id, show)
 {
   var socket = this.Mgr.SocketMgr();
 
@@ -349,7 +357,7 @@ E_MeshManager.prototype.ShowHide = function(id, show)
   this.Mgr.Redraw();
 }
 
-E_MeshManager.prototype.RemoveMesh_S = function()
+E_MeshManager.prototype.BroadcastMeshRemove = function()
 {
   if(this.m_selectedMeshIdx == -1) return;
   var id = this.m_selectedMeshIdx;
@@ -360,6 +368,10 @@ E_MeshManager.prototype.RemoveMesh_S = function()
 
 E_MeshManager.prototype.RemoveMesh = function(id)
 {
+  if(id == null){
+    if(this.m_selectedMeshIdx == -1) return;
+    id = this.m_selectedMeshIdx;
+  }
   this.ShowHide(id, false);
 
   //Remove From The Mesh List
@@ -431,6 +443,14 @@ E_SocketManager.prototype.HandleSignal = function()
   socket.on("SIGNAL_JOIN_CALLBACK", function(data){
     $$("ID_CHAT_USER").setValue(data);
     $$("ID_CHAT_RESULT").setValue(data + " is joined");
+  });
+
+  socket.on("SIGNAL_INIT_MESHLIST", function(data){
+    Mgr.MeshMgr().InitMeshList(data);
+  });
+
+  socket.on("disconnected", function(){
+    socket.emit("disconnect");
   });
 
 
@@ -530,8 +550,8 @@ $$("ID_VIEW_TREE").attachEvent("onItemCheck", function(id){
   if(this.isBranch()) return;
 
   var checkState = this.isChecked(id);
-  Manager.MeshMgr().ToggleTreeCheckState(id, checkState);
-  //Manager.MeshMgr().ShowHide(id, checkState);
+  Manager.MeshMgr().BroadcastCheckState(id, checkState);
+  Manager.MeshMgr().ShowHide(id, checkState);
 });
 
 $$("ID_VIEW_TREE").attachEvent("onItemClick", function(id){
@@ -544,9 +564,9 @@ $$("ID_VIEW_TREE").attachEvent("onItemDblClick", function(){
 });
 
 $$("ID_VIEW_TREE").attachEvent("onKeyPress", function(code, e){
-  if(e.key == "Backspace"){
-    Manager.MeshMgr().RemoveMesh_S();
-    //Manager.MeshMgr().RemoveMesh();
+  if(e.key == "Backspace" || e.key == "Delete"){
+    Manager.MeshMgr().BroadcastMeshRemove();
+    Manager.MeshMgr().RemoveMesh();
   }
 });
 

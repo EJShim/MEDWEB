@@ -9,6 +9,14 @@ function E_MeshManager(Mgr)
   this.m_selectedMeshIdx = -1;
 }
 
+E_MeshManager.prototype.InitMeshList = function(list)
+{
+  console.log(list);
+  for(var i in list){
+    this.ImportMesh("./workingdata/" + list[i], list[i]);
+  }
+}
+
 E_MeshManager.prototype.ImportMesh = function(path, name)
 {
   //Extract Geometry From the Path
@@ -48,7 +56,7 @@ E_MeshManager.prototype.AddMesh = function(mesh)
   this.Mgr.Redraw();
 }
 
-E_MeshManager.prototype.ToggleTreeCheckState = function(id, show)
+E_MeshManager.prototype.BroadcastCheckState = function(id, show)
 {
   var socket = this.Mgr.SocketMgr();
 
@@ -73,7 +81,7 @@ E_MeshManager.prototype.ShowHide = function(id, show)
   this.Mgr.Redraw();
 }
 
-E_MeshManager.prototype.RemoveMesh_S = function()
+E_MeshManager.prototype.BroadcastMeshRemove = function()
 {
   if(this.m_selectedMeshIdx == -1) return;
   var id = this.m_selectedMeshIdx;
@@ -84,6 +92,10 @@ E_MeshManager.prototype.RemoveMesh_S = function()
 
 E_MeshManager.prototype.RemoveMesh = function(id)
 {
+  if(id == null){
+    if(this.m_selectedMeshIdx == -1) return;
+    id = this.m_selectedMeshIdx;
+  }
   this.ShowHide(id, false);
 
   //Remove From The Mesh List

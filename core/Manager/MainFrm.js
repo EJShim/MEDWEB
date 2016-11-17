@@ -42,8 +42,8 @@ $$("ID_VIEW_TREE").attachEvent("onItemCheck", function(id){
   if(this.isBranch()) return;
 
   var checkState = this.isChecked(id);
-  Manager.MeshMgr().ToggleTreeCheckState(id, checkState);
-  //Manager.MeshMgr().ShowHide(id, checkState);
+  Manager.MeshMgr().BroadcastCheckState(id, checkState);
+  Manager.MeshMgr().ShowHide(id, checkState);
 });
 
 $$("ID_VIEW_TREE").attachEvent("onItemClick", function(id){
@@ -56,9 +56,9 @@ $$("ID_VIEW_TREE").attachEvent("onItemDblClick", function(){
 });
 
 $$("ID_VIEW_TREE").attachEvent("onKeyPress", function(code, e){
-  if(e.key == "Backspace"){
-    Manager.MeshMgr().RemoveMesh_S();
-    //Manager.MeshMgr().RemoveMesh();
+  if(e.key == "Backspace" || e.key == "Delete"){
+    Manager.MeshMgr().BroadcastMeshRemove();
+    Manager.MeshMgr().RemoveMesh();
   }
 });
 

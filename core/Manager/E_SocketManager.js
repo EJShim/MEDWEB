@@ -34,6 +34,14 @@ E_SocketManager.prototype.HandleSignal = function()
     $$("ID_CHAT_RESULT").setValue(data + " is joined");
   });
 
+  socket.on("SIGNAL_INIT_MESHLIST", function(data){
+    Mgr.MeshMgr().InitMeshList(data);
+  });
+
+  socket.on("disconnected", function(){
+    socket.emit("disconnect");
+  });
+
 
   socket.on("SIGNAL_SCENE", function(data){
     var renderer = Mgr.GetRenderer();

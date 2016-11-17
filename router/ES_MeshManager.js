@@ -18,4 +18,11 @@ ES_MeshManager.prototype.RemoveMesh = function(idx)
   this.m_meshList.splice(idx, 1);
 }
 
+ES_MeshManager.prototype.Destroy = function()
+{
+  for(var i in this.m_meshList){
+    this.RemoveMesh(i);
+  }
+}
+
 module.exports = ES_MeshManager;

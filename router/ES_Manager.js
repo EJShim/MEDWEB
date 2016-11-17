@@ -4,8 +4,7 @@ var ES_Router = require('./ES_Router.js');
 
 function ES_Manager(express, app)
 {
-  //Initialize Server
-  app.set('views', __dirname + '/../views');
+  //Initialize Server.set('views', __dirname + '/../views');
   app.set('view engine', 'ejs');
   app.engine('html', require('ejs').renderFile);
   app.use(express.static('public'));
@@ -24,6 +23,8 @@ function ES_Manager(express, app)
   var m_router = new ES_Router(this, app);
   var m_socketManager = new ES_SocketManager(this, server);
   var m_meshManager = new ES_MeshManager(this);
+  this.camera = null
+
 
 
 
@@ -45,6 +46,7 @@ function ES_Manager(express, app)
 ES_Manager.prototype.Destroy = function()
 {
   var socket = this.socketMgr();
+  this.MeshMgr().Destroy();
 }
 
 module.exports = ES_Manager;

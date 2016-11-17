@@ -42,7 +42,7 @@ elements:[
 
 
 var chat_module = [
-                    { view:"textarea", id:"ID_CHAT_RESULT", scroll:"y" },
+                    { view:"textarea", id:"ID_CHAT_RESULT", scroll:"y", readonly:true},
               			{ margin:5, cols:[
                       { view:"text", id:"ID_CHAT_USER",value:'Username' },
                 			{ view:"text", id:"ID_CHAT_INPUT", gravity:5.0},
@@ -94,7 +94,7 @@ webix.ui({
               {view:"resizer"},
               {
                 id:"ID_VIEW_FOOTER",
-                gravity:0.2,
+                gravity:0.4,
                 cols:[
                     {view:"form", elements:chat_module, gravity:2.0},
                     {view:"resizer"},
