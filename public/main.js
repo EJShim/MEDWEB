@@ -57,8 +57,8 @@ webix.ui({
     {
       view:"toolbar",
       elements:[
-        {id:"ID_BUTTON_IMPORT_MESH", view:"button",  value:"Import Mesh", width:100},
-        {id:"ID_BUTTON_IMPORT_VOLUME", view:"button", value:"Import Dicom", width:100}
+        {id:"ID_UPLOAD_MESH", view:"uploader",  value:"Import Mesh", upload:"/upload", width:100},
+        {id:"ID_UPLOAD_VOLUME", view:"button", value:"Import Dicom", width:100}
       ]
     },
     {

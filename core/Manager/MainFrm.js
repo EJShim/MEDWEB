@@ -1,5 +1,5 @@
 //Define Header
-var E_Manager = require("./Manager/E_Manager.js");
+var E_Manager = require("./E_Manager.js");
 
 //Initialize Manager
 var Manager = new E_Manager();
@@ -39,36 +39,36 @@ $$("ID_VIEW_FOOTER").attachEvent("onViewResize", function(){
 
 
 /// Button Events
-$$("ID_BUTTON_IMPORT_MESH").attachEvent("onItemClick", function(){
-  var parent = $$("ID_BUTTON_IMPORT_MESH").getNode().childNodes[0];
-
-  //Create File Dialog
-  var fileDialog = document.createElement("input");
-  fileDialog.setAttribute("type", "file");
-  fileDialog.setAttribute("multiple", true);
-  fileDialog.click();
-  parent.appendChild(fileDialog);
-
-  fileDialog.addEventListener("change", function(ev){
-    //console.log(ev.target.files);
-
-    for(var i=0 ; i<ev.target.files.length ; i++){
-        var path = URL.createObjectURL(ev.target.files[i]);
-        var name = ev.target.files[i].name;
-
-        //Import Mesh
-        Manager.MeshMgr().ImportMesh(path, name);
-        URL.revokeObjectURL(path);
-    }
-
-    //Remove File Dialog Element
-    parent.removeChild(fileDialog);
-  });
-});
-
-$$("ID_BUTTON_IMPORT_VOLUME").attachEvent("onItemClick", function(){
-  console.log("Volume Import Clicked");
-});
+// $$("ID_BUTTON_IMPORT_MESH").attachEvent("onItemClick", function(){
+//   var parent = $$("ID_BUTTON_IMPORT_MESH").getNode().childNodes[0];
+//
+//   //Create File Dialog
+//   var fileDialog = document.createElement("input");
+//   fileDialog.setAttribute("type", "file");
+//   fileDialog.setAttribute("multiple", true);
+//   fileDialog.click();
+//   parent.appendChild(fileDialog);
+//
+//   fileDialog.addEventListener("change", function(ev){
+//     //console.log(ev.target.files);
+//
+//     for(var i=0 ; i<ev.target.files.length ; i++){
+//         var path = URL.createObjectURL(ev.target.files[i]);
+//         var name = ev.target.files[i].name;
+//
+//         //Import Mesh
+//         Manager.MeshMgr().ImportMesh(path, name);
+//         URL.revokeObjectURL(path);
+//     }
+//
+//     //Remove File Dialog Element
+//     parent.removeChild(fileDialog);
+//   });
+// });
+//
+// $$("ID_BUTTON_IMPORT_VOLUME").attachEvent("onItemClick", function(){
+//   console.log("Volume Import Clicked");
+// });
 
 
 ///Tree Events
@@ -94,8 +94,6 @@ $$("ID_VIEW_TREE").attachEvent("onKeyPress", function(code, e){
     Manager.MeshMgr().RemoveMesh();
   }
 });
-
-
 
 
 ///Chat module

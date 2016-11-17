@@ -1,121 +1,4 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
-//Define Header
-var E_Manager = require("./Manager/E_Manager.js");
-
-//Initialize Manager
-var Manager = new E_Manager();
-Manager.Initialize();
-Manager.Animate();
-
-///////////////////////////////////INTERACTION EVENTS////////////////////////////////
-/// Resizing Events
-
-$(window).resize(function(){
-  Manager.OnResize();
-});
-
-$$("ID_LEFT_AREA").attachEvent("onViewResize", function(){
-  Manager.OnResize();
-});
-
-$$("ID_VIEW_MAIN").attachEvent("onViewResize", function(){
-  Manager.OnResize();
-});
-
-$$("ID_VIEW_AXL").attachEvent("onViewResize", function(){
-  Manager.OnResize();
-});
-
-$$("ID_VIEW_COR").attachEvent("onViewResize", function(){
-  Manager.OnResize();
-});
-
-$$("ID_VIEW_SAG").attachEvent("onViewResize", function(){
-  Manager.OnResize();
-});
-
-$$("ID_VIEW_FOOTER").attachEvent("onViewResize", function(){
-  Manager.OnResize();
-});
-
-
-/// Button Events
-$$("ID_BUTTON_IMPORT_MESH").attachEvent("onItemClick", function(){
-  var parent = $$("ID_BUTTON_IMPORT_MESH").getNode().childNodes[0];
-
-  //Create File Dialog
-  var fileDialog = document.createElement("input");
-  fileDialog.setAttribute("type", "file");
-  fileDialog.setAttribute("multiple", true);
-  fileDialog.click();
-  parent.appendChild(fileDialog);
-
-  fileDialog.addEventListener("change", function(ev){
-    //console.log(ev.target.files);
-
-    for(var i=0 ; i<ev.target.files.length ; i++){
-        var path = URL.createObjectURL(ev.target.files[i]);
-        var name = ev.target.files[i].name;
-
-        //Import Mesh
-        Manager.MeshMgr().ImportMesh(path, name);
-        URL.revokeObjectURL(path);
-    }
-
-    //Remove File Dialog Element
-    parent.removeChild(fileDialog);
-  });
-});
-
-$$("ID_BUTTON_IMPORT_VOLUME").attachEvent("onItemClick", function(){
-  console.log("Volume Import Clicked");
-});
-
-
-///Tree Events
-$$("ID_VIEW_TREE").attachEvent("onItemCheck", function(id){
-  if(this.isBranch()) return;
-
-  var checkState = this.isChecked(id);
-  Manager.MeshMgr().ShowHide(id, checkState);
-});
-
-$$("ID_VIEW_TREE").attachEvent("onItemClick", function(id){
-  //this.select(id);
-  Manager.MeshMgr().SetSelectedMesh(id);
-});
-
-$$("ID_VIEW_TREE").attachEvent("onItemDblClick", function(){
-  console.log("Item DBlClicked");
-});
-
-$$("ID_VIEW_TREE").attachEvent("onKeyPress", function(code, e){
-
-  if(e.key == "Backspace"){
-    Manager.MeshMgr().RemoveMesh();
-  }
-});
-
-
-
-
-///Chat module
-$$("ID_CHAT_INPUT").attachEvent("onKeyPress", function(code, e){
-  if(e.key == "Enter"){
-
-    var userData = $$("ID_CHAT_USER").getValue();
-    var valueData = this.getValue();
-
-    var data = {user:userData, value:valueData};
-    ///Clear Form
-    Manager.SocketMgr().EmitData("SIGNAL_CHAT", data);
-
-    //Clear
-    ///this.setValue("");
-  }
-});
-
-},{"./Manager/E_Manager.js":3}],2:[function(require,module,exports){
 function E_Interactor(Mgr, renderer)
 {
   this.Mgr = Mgr;
@@ -167,7 +50,7 @@ E_Interactor.prototype.OnMouseWheel = function()
 
 module.exports = E_Interactor;
 
-},{}],3:[function(require,module,exports){
+},{}],2:[function(require,module,exports){
 var THREE = require("three");
 var TrackballControls = require('three-trackballcontrols');
 
@@ -391,7 +274,7 @@ E_Manager.prototype.UploadScene = function()
 
 module.exports = E_Manager;
 
-},{"./E_Interactor.js":2,"./E_MeshManager.js":4,"./E_SocketManager.js":5,"./E_VolumeManager.js":6,"three":10,"three-trackballcontrols":8}],4:[function(require,module,exports){
+},{"./E_Interactor.js":1,"./E_MeshManager.js":3,"./E_SocketManager.js":4,"./E_VolumeManager.js":5,"three":10,"three-trackballcontrols":8}],3:[function(require,module,exports){
 var THREE = require("three");
 var STLLoader = require('three-stl-loader')(THREE);
 
@@ -501,7 +384,7 @@ E_MeshManager.prototype.GetCenter = function(mesh)
 
 module.exports = E_MeshManager;
 
-},{"three":10,"three-stl-loader":7}],5:[function(require,module,exports){
+},{"three":10,"three-stl-loader":7}],4:[function(require,module,exports){
 var THREE = require("three");
 
 function E_SocketManager(Mgr)
@@ -567,7 +450,7 @@ E_SocketManager.prototype.HandleSignal = function()
 
 module.exports = E_SocketManager;
 
-},{"three":10}],6:[function(require,module,exports){
+},{"three":10}],5:[function(require,module,exports){
 function E_VolumeManager(Mgr)
 {
   this.Mgr = Mgr;
@@ -576,7 +459,122 @@ function E_VolumeManager(Mgr)
 
 module.exports = E_VolumeManager;
 
-},{}],7:[function(require,module,exports){
+},{}],6:[function(require,module,exports){
+//Define Header
+var E_Manager = require("./E_Manager.js");
+
+//Initialize Manager
+var Manager = new E_Manager();
+Manager.Initialize();
+Manager.Animate();
+
+///////////////////////////////////INTERACTION EVENTS////////////////////////////////
+/// Resizing Events
+
+$(window).resize(function(){
+  Manager.OnResize();
+});
+
+$$("ID_LEFT_AREA").attachEvent("onViewResize", function(){
+  Manager.OnResize();
+});
+
+$$("ID_VIEW_MAIN").attachEvent("onViewResize", function(){
+  Manager.OnResize();
+});
+
+$$("ID_VIEW_AXL").attachEvent("onViewResize", function(){
+  Manager.OnResize();
+});
+
+$$("ID_VIEW_COR").attachEvent("onViewResize", function(){
+  Manager.OnResize();
+});
+
+$$("ID_VIEW_SAG").attachEvent("onViewResize", function(){
+  Manager.OnResize();
+});
+
+$$("ID_VIEW_FOOTER").attachEvent("onViewResize", function(){
+  Manager.OnResize();
+});
+
+
+/// Button Events
+// $$("ID_BUTTON_IMPORT_MESH").attachEvent("onItemClick", function(){
+//   var parent = $$("ID_BUTTON_IMPORT_MESH").getNode().childNodes[0];
+//
+//   //Create File Dialog
+//   var fileDialog = document.createElement("input");
+//   fileDialog.setAttribute("type", "file");
+//   fileDialog.setAttribute("multiple", true);
+//   fileDialog.click();
+//   parent.appendChild(fileDialog);
+//
+//   fileDialog.addEventListener("change", function(ev){
+//     //console.log(ev.target.files);
+//
+//     for(var i=0 ; i<ev.target.files.length ; i++){
+//         var path = URL.createObjectURL(ev.target.files[i]);
+//         var name = ev.target.files[i].name;
+//
+//         //Import Mesh
+//         Manager.MeshMgr().ImportMesh(path, name);
+//         URL.revokeObjectURL(path);
+//     }
+//
+//     //Remove File Dialog Element
+//     parent.removeChild(fileDialog);
+//   });
+// });
+//
+// $$("ID_BUTTON_IMPORT_VOLUME").attachEvent("onItemClick", function(){
+//   console.log("Volume Import Clicked");
+// });
+
+
+///Tree Events
+$$("ID_VIEW_TREE").attachEvent("onItemCheck", function(id){
+  if(this.isBranch()) return;
+
+  var checkState = this.isChecked(id);
+  Manager.MeshMgr().ShowHide(id, checkState);
+});
+
+$$("ID_VIEW_TREE").attachEvent("onItemClick", function(id){
+  //this.select(id);
+  Manager.MeshMgr().SetSelectedMesh(id);
+});
+
+$$("ID_VIEW_TREE").attachEvent("onItemDblClick", function(){
+  console.log("Item DBlClicked");
+});
+
+$$("ID_VIEW_TREE").attachEvent("onKeyPress", function(code, e){
+
+  if(e.key == "Backspace"){
+    Manager.MeshMgr().RemoveMesh();
+  }
+});
+
+
+///Chat module
+$$("ID_CHAT_INPUT").attachEvent("onKeyPress", function(code, e){
+  if(e.key == "Enter"){
+
+    var userData = $$("ID_CHAT_USER").getValue();
+    var valueData = this.getValue();
+
+    var data = {user:userData, value:valueData};
+    ///Clear Form
+    Manager.SocketMgr().EmitData("SIGNAL_CHAT", data);
+
+    //Clear
+    ///this.setValue("");
+  }
+});
+
+},{"./E_Manager.js":2}],7:[function(require,module,exports){
 /**
  * @author aleeper / http://adamleeper.com/
  * @author mrdoob / http://mrdoob.com/
@@ -84585,4 +84583,4 @@ if (typeof exports !== 'undefined') {
 
 })));
 
-},{}]},{},[1]);
+},{}]},{},[6]);

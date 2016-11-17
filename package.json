@@ -2,8 +2,10 @@
   "name": "express-tutorial",
   "version": "1.0.0",
   "dependencies": {
+    "body-parser": "^1.15.2",
     "ejs": "~2.4.1",
     "express": "~4.13.1",
+    "multiparty": "^4.1.2",
     "socket.io": "^1.5.1",
     "three": "^0.82.1",
     "three-stl-loader": "^1.0.4",
@@ -18,7 +20,7 @@
     "url": "https://github.com/EJShim/ejshim.git"
   },
   "scripts": {
-    "build": "browserify core/MainFrm.js -o public/app.js",
+    "build": "browserify core/Manager/MainFrm.js -o public/app.js",
     "start": "node server.js"
   }
 }

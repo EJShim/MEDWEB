@@ -6,6 +6,7 @@ function ES_Manager(express, app, router)
   app.set('views', __dirname + '/../../views');
   app.set('view engine', 'ejs');
   app.engine('html', require('ejs').renderFile);
+
   app.use(express.static('public'));
 
   var port = process.env.PORT || 8080;
@@ -20,11 +21,6 @@ function ES_Manager(express, app, router)
   });
 
   var m_socketManager = new ES_SocketManager(this, server);
-
-
-
-  console.log("Manager Initialized");
-
 }
 
 module.exports = ES_Manager;
