@@ -48,6 +48,14 @@ E_MeshManager.prototype.AddMesh = function(mesh)
   this.Mgr.Redraw();
 }
 
+E_MeshManager.prototype.ToggleTreeCheckState = function(id, show)
+{
+  var socket = this.Mgr.SocketMgr();
+
+  var data = {id:id, show:show};
+  socket.EmitData("SIGNAL_MESH_SHOWHIDE", data)
+}
+
 E_MeshManager.prototype.ShowHide = function(id, show)
 {
   if(this.m_meshList.length < 1) return;
@@ -65,11 +73,17 @@ E_MeshManager.prototype.ShowHide = function(id, show)
   this.Mgr.Redraw();
 }
 
-E_MeshManager.prototype.RemoveMesh = function(){
-
+E_MeshManager.prototype.RemoveMesh_S = function()
+{
   if(this.m_selectedMeshIdx == -1) return;
   var id = this.m_selectedMeshIdx;
-  //Hide Mesh
+  var socket = this.Mgr.SocketMgr();
+
+  socket.EmitData("SIGNAL_REMOVE_MESH", id);
+}
+
+E_MeshManager.prototype.RemoveMesh = function(id)
+{
   this.ShowHide(id, false);
 
   //Remove From The Mesh List
@@ -89,7 +103,6 @@ E_MeshManager.prototype.SetSelectedMesh = function(id)
 E_MeshManager.prototype.GetMesh = function(id){
   return this.m_meshList[id];
 }
-
 E_MeshManager.prototype.GetCenter = function(mesh)
 {
   //Real Center Position of Mesh

@@ -157,8 +157,7 @@ E_Manager.prototype.Initialize = function()
   var geometry = new THREE.BoxGeometry( 10, 10, 10 );
   var material = new THREE.MeshPhongMaterial({color:0xff0000, shading:THREE.SmoothShading, shininess:5, specular:0xaaaaaa});
   var cube = new THREE.Mesh( geometry, material );
-  renderer[0].scene.add( cube );
-  renderer[2].scene.add( cube.clone() );
+  renderer[2].scene.add( cube );
 
   //Redraw
   this.Redraw();
@@ -325,6 +324,14 @@ E_MeshManager.prototype.AddMesh = function(mesh)
   this.Mgr.Redraw();
 }
 
+E_MeshManager.prototype.ToggleTreeCheckState = function(id, show)
+{
+  var socket = this.Mgr.SocketMgr();
+
+  var data = {id:id, show:show};
+  socket.EmitData("SIGNAL_MESH_SHOWHIDE", data)
+}
+
 E_MeshManager.prototype.ShowHide = function(id, show)
 {
   if(this.m_meshList.length < 1) return;
@@ -342,11 +349,17 @@ E_MeshManager.prototype.ShowHide = function(id, show)
   this.Mgr.Redraw();
 }
 
-E_MeshManager.prototype.RemoveMesh = function(){
-
+E_MeshManager.prototype.RemoveMesh_S = function()
+{
   if(this.m_selectedMeshIdx == -1) return;
   var id = this.m_selectedMeshIdx;
-  //Hide Mesh
+  var socket = this.Mgr.SocketMgr();
+
+  socket.EmitData("SIGNAL_REMOVE_MESH", id);
+}
+
+E_MeshManager.prototype.RemoveMesh = function(id)
+{
   this.ShowHide(id, false);
 
   //Remove From The Mesh List
@@ -366,7 +379,6 @@ E_MeshManager.prototype.SetSelectedMesh = function(id)
 E_MeshManager.prototype.GetMesh = function(id){
   return this.m_meshList[id];
 }
-
 E_MeshManager.prototype.GetCenter = function(mesh)
 {
   //Real Center Position of Mesh
@@ -446,6 +458,20 @@ E_SocketManager.prototype.HandleSignal = function()
     //Clear
     $$("ID_CHAT_INPUT").setValue("");
   });
+
+
+  //File Upload SIGNAL_MESH_UPLOAD
+  socket.on("SIGNAL_MESH_UPLOAD", function(data){
+    Mgr.MeshMgr().ImportMesh("./workingdata/" + data, data);
+  });
+
+  socket.on("SIGNAL_MESH_SHOWHIDE", function(data){
+    Mgr.MeshMgr().ShowHide(data.id, data.show);
+  })
+
+  socket.on("SIGNAL_REMOVE_MESH", function(data){
+    Mgr.MeshMgr().RemoveMesh(data);
+  });
 }
 
 module.exports = E_SocketManager;
@@ -499,46 +525,13 @@ $$("ID_VIEW_FOOTER").attachEvent("onViewResize", function(){
   Manager.OnResize();
 });
 
-
-/// Button Events
-// $$("ID_BUTTON_IMPORT_MESH").attachEvent("onItemClick", function(){
-//   var parent = $$("ID_BUTTON_IMPORT_MESH").getNode().childNodes[0];
-//
-//   //Create File Dialog
-//   var fileDialog = document.createElement("input");
-//   fileDialog.setAttribute("type", "file");
-//   fileDialog.setAttribute("multiple", true);
-//   fileDialog.click();
-//   parent.appendChild(fileDialog);
-//
-//   fileDialog.addEventListener("change", function(ev){
-//     //console.log(ev.target.files);
-//
-//     for(var i=0 ; i<ev.target.files.length ; i++){
-//         var path = URL.createObjectURL(ev.target.files[i]);
-//         var name = ev.target.files[i].name;
-//
-//         //Import Mesh
-//         Manager.MeshMgr().ImportMesh(path, name);
-//         URL.revokeObjectURL(path);
-//     }
-//
-//     //Remove File Dialog Element
-//     parent.removeChild(fileDialog);
-//   });
-// });
-//
-// $$("ID_BUTTON_IMPORT_VOLUME").attachEvent("onItemClick", function(){
-//   console.log("Volume Import Clicked");
-// });
-
-
 ///Tree Events
 $$("ID_VIEW_TREE").attachEvent("onItemCheck", function(id){
   if(this.isBranch()) return;
 
   var checkState = this.isChecked(id);
-  Manager.MeshMgr().ShowHide(id, checkState);
+  Manager.MeshMgr().ToggleTreeCheckState(id, checkState);
+  //Manager.MeshMgr().ShowHide(id, checkState);
 });
 
 $$("ID_VIEW_TREE").attachEvent("onItemClick", function(id){
@@ -551,9 +544,9 @@ $$("ID_VIEW_TREE").attachEvent("onItemDblClick", function(){
 });
 
 $$("ID_VIEW_TREE").attachEvent("onKeyPress", function(code, e){
-
   if(e.key == "Backspace"){
-    Manager.MeshMgr().RemoveMesh();
+    Manager.MeshMgr().RemoveMesh_S();
+    //Manager.MeshMgr().RemoveMesh();
   }
 });
 

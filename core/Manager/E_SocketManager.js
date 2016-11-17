@@ -59,6 +59,20 @@ E_SocketManager.prototype.HandleSignal = function()
     //Clear
     $$("ID_CHAT_INPUT").setValue("");
   });
+
+
+  //File Upload SIGNAL_MESH_UPLOAD
+  socket.on("SIGNAL_MESH_UPLOAD", function(data){
+    Mgr.MeshMgr().ImportMesh("./workingdata/" + data, data);
+  });
+
+  socket.on("SIGNAL_MESH_SHOWHIDE", function(data){
+    Mgr.MeshMgr().ShowHide(data.id, data.show);
+  })
+
+  socket.on("SIGNAL_REMOVE_MESH", function(data){
+    Mgr.MeshMgr().RemoveMesh(data);
+  });
 }
 
 module.exports = E_SocketManager;

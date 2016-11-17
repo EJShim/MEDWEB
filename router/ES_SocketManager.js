@@ -1,6 +1,7 @@
 function ES_SocketManager(Mgr, server)
 {
   this.Mgr = Mgr;
+  this.clients = [];
 
   //Initialize WebSocket
   var m_io = require('socket.io').listen(server);
@@ -34,8 +35,16 @@ ES_SocketManager.prototype.HandleSignal = function()
 
     socket.on("SIGNAL_CHAT", function(data){
       that.HandleChat(socket, data);
-    })
+    });
 
+    socket.on("SIGNAL_MESH_SHOWHIDE", function(data){
+      io.emit("SIGNAL_MESH_SHOWHIDE", data);
+    });
+
+    socket.on("SIGNAL_REMOVE_MESH", function(data){
+      that.Mgr.MeshMgr().RemoveMesh(data);
+      io.emit("SIGNAL_REMOVE_MESH", data);
+    });
 
     socket.on("disconnet", function(){
       console.log("A User Disconnected : ");
@@ -55,6 +64,15 @@ ES_SocketManager.prototype.HandleChat = function(socket, data)
 
   socket.emit('SIGNAL_CHAT_CALLBACK', data);
   socket.broadcast.emit("SIGNAL_CHAT", data);
+}
+
+ES_SocketManager.prototype.OnFinishFileUpload = function(path)
+{
+
+
+  //EMIT SIGNAL
+  var io = this.IO();
+  io.emit('SIGNAL_MESH_UPLOAD', path);
 }
 
 module.exports = ES_SocketManager;
