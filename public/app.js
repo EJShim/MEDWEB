@@ -467,7 +467,7 @@ E_SocketManager.prototype.HandleSignal = function()
   });
 
   socket.on("SIGNAL_CHAT_CALLBACK", function(data){
-    that.HandleChat();
+    that.HandleChat(data);
     $$("ID_CHAT_INPUT").setValue("");
   });
 
