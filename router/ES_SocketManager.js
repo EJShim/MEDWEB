@@ -27,6 +27,7 @@ ES_SocketManager.prototype.HandleSignal = function()
 
   io.sockets.on('connection', function(socket){
     //Initialize Chat
+    console.log("New Connection!!");
     socket.emit("SIGNAL_JOIN_CALLBACK", socket.id);
     socket.broadcast.emit("SIGNAL_JOIN", socket.id);
 
@@ -56,9 +57,17 @@ ES_SocketManager.prototype.HandleSignal = function()
       socket.broadcast.emit("SIGNAL_REMOVE_MESH", data);
     });
 
+    socket.on("TEST_MESSAGE", function(data){
+      var temp = JSON.parse(data);
+      console.log(temp);
+      that.HandleCamera(socket, temp);
+    });
+
     socket.once("disconnet", function(){
       console.log("A User Disconnected : ");
     });
+
+
   });
 }
 

@@ -458,12 +458,7 @@ E_SocketManager.prototype.HandleSignal = function()
 
 
   socket.on("SIGNAL_SCENE", function(data){
-    var renderer = Mgr.GetRenderer();
-    renderer[0].camera.position.set(data.pos.x, data.pos.y, data.pos.z);
-    renderer[0].camera.rotation.set(data.rot.x, data.rot.y, data.rot.z);
-    renderer[0].camera.up.set(data.up.x, data.up.y, data.up.z);
-    renderer[0].control.target.set(data.tar.x, data.tar.y, data.tar.z);
-
+    that.HandleCamera();
   });
 
 
@@ -472,8 +467,7 @@ E_SocketManager.prototype.HandleSignal = function()
   });
 
   socket.on("SIGNAL_CHAT_CALLBACK", function(data){
-    var val =  data.user + " : " + data.value;
-    $$("ID_CHAT_RESULT").setValue(val);
+    that.HandleChat();
     $$("ID_CHAT_INPUT").setValue("");
   });
 
@@ -490,6 +484,16 @@ E_SocketManager.prototype.HandleSignal = function()
   socket.on("SIGNAL_REMOVE_MESH", function(data){
     Mgr.MeshMgr().RemoveMesh(data);
   });
+}
+
+E_SocketManager.prototype.HandleCamera = function(data)
+{
+  console.log(data);
+  var renderer = this.Mgr.GetRenderer();
+  renderer[0].camera.position.set(data.pos.x, data.pos.y, data.pos.z);
+  renderer[0].camera.rotation.set(data.rot.x, data.rot.y, data.rot.z);
+  renderer[0].camera.up.set(data.up.x, data.up.y, data.up.z);
+  renderer[0].control.target.set(data.tar.x, data.tar.y, data.tar.z);
 }
 
 E_SocketManager.prototype.HandleChat = function(data){

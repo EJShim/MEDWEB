@@ -77,7 +77,8 @@ E_SocketManager.prototype.HandleSignal = function()
 
 E_SocketManager.prototype.HandleCamera = function(data)
 {
-  var renderer = Mgr.GetRenderer();
+  console.log(data);
+  var renderer = this.Mgr.GetRenderer();
   renderer[0].camera.position.set(data.pos.x, data.pos.y, data.pos.z);
   renderer[0].camera.rotation.set(data.rot.x, data.rot.y, data.rot.z);
   renderer[0].camera.up.set(data.up.x, data.up.y, data.up.z);
