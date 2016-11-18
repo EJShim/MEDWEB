@@ -56,7 +56,7 @@ ES_SocketManager.prototype.HandleSignal = function()
       socket.broadcast.emit("SIGNAL_REMOVE_MESH", data);
     });
 
-    socket.on("disconnet", function(){
+    socket.once("disconnet", function(){
       console.log("A User Disconnected : ");
     });
   });

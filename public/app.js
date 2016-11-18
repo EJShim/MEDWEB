@@ -432,12 +432,15 @@ E_SocketManager.prototype.EmitData = function(signal, data)
 
 E_SocketManager.prototype.HandleSignal = function()
 {
+  var that = this;
   var socket = this.socket;
   var Mgr = this.Mgr;
 
   socket.on("SIGNAL_JOIN", function(data){
     var val = $$("ID_CHAT_RESULT").getValue() + "\n" + data + " is joined";
     $$("ID_CHAT_RESULT").setValue(val);
+    var textarea = $$("ID_CHAT_RESULT").getNode().childNodes[0].childNodes[0];
+    textarea.scrollTop = textarea.scrollHeight;
   });
 
   socket.on("SIGNAL_JOIN_CALLBACK", function(data){
@@ -465,17 +468,12 @@ E_SocketManager.prototype.HandleSignal = function()
 
 
   socket.on("SIGNAL_CHAT", function(data){
-
-    var val = $$("ID_CHAT_RESULT").getValue() + "\n" + data.user + " : " + data.value;
-    $$("ID_CHAT_RESULT").setValue(val);
+    that.HandleChat(data);
   });
 
   socket.on("SIGNAL_CHAT_CALLBACK", function(data){
-
-    var val = $$("ID_CHAT_RESULT").getValue() + "\n" + data.user + " : " + data.value;
+    var val =  data.user + " : " + data.value;
     $$("ID_CHAT_RESULT").setValue(val);
-
-    //Clear
     $$("ID_CHAT_INPUT").setValue("");
   });
 
@@ -492,6 +490,14 @@ E_SocketManager.prototype.HandleSignal = function()
   socket.on("SIGNAL_REMOVE_MESH", function(data){
     Mgr.MeshMgr().RemoveMesh(data);
   });
+}
+
+E_SocketManager.prototype.HandleChat = function(data){
+  var val = $$("ID_CHAT_RESULT").getValue() + "\n" + data.user + " : " + data.value;
+  $$("ID_CHAT_RESULT").setValue(val);
+  var textarea = $$("ID_CHAT_RESULT").getNode().childNodes[0].childNodes[0];
+  textarea.scrollTop = textarea.scrollHeight;
+  //console.log($$("ID_CHAT_RESULT").getNode().childNodes[0].childNodes[0]);
 }
 
 module.exports = E_SocketManager;
