@@ -32,7 +32,6 @@ ES_SocketManager.prototype.HandleSignal = function()
     socket.broadcast.emit("SIGNAL_JOIN", socket.id);
 
     //Initialize camera
-    ;
     if(that.Mgr.camera != null){
       socket.emit("SIGNAL_SCENE", that.Mgr.camera);
     }
@@ -58,9 +57,8 @@ ES_SocketManager.prototype.HandleSignal = function()
     });
 
     socket.on("TEST_MESSAGE", function(data){
-      var temp = JSON.parse(data);
-      console.log(temp);
-      that.HandleCamera(socket, temp);
+      var val = JSON.parse(data);
+      that.HandleCamera(socket, val);
     });
 
     socket.once("disconnet", function(){

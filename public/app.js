@@ -458,7 +458,7 @@ E_SocketManager.prototype.HandleSignal = function()
 
 
   socket.on("SIGNAL_SCENE", function(data){
-    that.HandleCamera();
+    that.HandleCamera(data);
   });
 
 
@@ -488,7 +488,6 @@ E_SocketManager.prototype.HandleSignal = function()
 
 E_SocketManager.prototype.HandleCamera = function(data)
 {
-  console.log(data);
   var renderer = this.Mgr.GetRenderer();
   renderer[0].camera.position.set(data.pos.x, data.pos.y, data.pos.z);
   renderer[0].camera.rotation.set(data.rot.x, data.rot.y, data.rot.z);
