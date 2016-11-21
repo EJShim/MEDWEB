@@ -75,7 +75,7 @@ ES_SocketManager.prototype.HandleSignal = function()
 ES_SocketManager.prototype.HandleVTKSignal = function(socket)
 {
   var that = this;
-  socket.on("QT_SIGANL_CAMERA", function(data){
+  socket.on("QT_SIGNAL_CAMERA", function(data){
     var val = JSON.parse(data);
     that.HandleCamera(socket, val);
   });
