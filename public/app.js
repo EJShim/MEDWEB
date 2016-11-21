@@ -311,7 +311,7 @@ E_MeshManager.prototype.LoadMesh = function(geometry, name)
   //var material = new THREE.MeshBasicMaterial( { color: 0x00ff00 } );
   var material = new THREE.MeshPhongMaterial({color:0xff0000, shading:THREE.SmoothShading, shininess:30, specular:0xaaaaaa});
   material.side = THREE.DoubleSide;
-  material.color = new THREE.Color(Math.random(), Math.random(), Math.random());
+  material.color = new THREE.Color(Math.random() + 0.5, Math.random() + 0.5 , Math.random() + 0.5);
 
   var mesh = new THREE.Mesh(geometry, material);
   mesh.name = name;
@@ -372,6 +372,7 @@ E_MeshManager.prototype.RemoveMesh = function(id)
     if(this.m_selectedMeshIdx == -1) return;
     id = this.m_selectedMeshIdx;
   }
+  console.log(id);
   this.ShowHide(id, false);
 
   //Remove From The Mesh List
@@ -467,7 +468,7 @@ E_SocketManager.prototype.HandleSignal = function()
   });
 
   socket.on("SIGNAL_CHAT_CALLBACK", function(data){
-    that.HandleChat();
+    that.HandleChat(data);
     $$("ID_CHAT_INPUT").setValue("");
   });
 

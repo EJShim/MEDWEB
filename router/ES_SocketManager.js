@@ -47,6 +47,10 @@ ES_SocketManager.prototype.HandleSignal = function()
       that.HandleChat(socket, data);
     });
 
+    socket.on("SIGNAL_MESH_UPLOAD", function(path){
+      socket.broadcast.emit("SIGNAL_MESH_UPLOAD", path);
+    });
+
     socket.on("SIGNAL_MESH_SHOWHIDE", function(data){
       socket.broadcast.emit("SIGNAL_MESH_SHOWHIDE", data);
     });
@@ -56,23 +60,33 @@ ES_SocketManager.prototype.HandleSignal = function()
       socket.broadcast.emit("SIGNAL_REMOVE_MESH", data);
     });
 
-    socket.on("TEST_MESSAGE", function(data){
-      var val = JSON.parse(data);
-      that.HandleCamera(socket, val);
-    });
+
 
     socket.once("disconnet", function(){
       console.log("A User Disconnected : ");
     });
 
+    that.HandleVTKSignal(socket);
 
+
+  });
+}
+
+ES_SocketManager.prototype.HandleVTKSignal = function(socket)
+{
+  var that = this;
+  socket.on("QT_SIGANL_CAMERA", function(data){
+    var val = JSON.parse(data);
+    that.HandleCamera(socket, val);
   });
 }
 
 ES_SocketManager.prototype.HandleCamera = function(socket, data)
 {
   this.Mgr.camera = data;
+
   socket.broadcast.emit("SIGNAL_SCENE", data);
+  socket.broadcast.emit("SIGNAL_VTK_SCENE", JSON.stringify(data));
 }
 
 ES_SocketManager.prototype.HandleChat = function(socket, data)
@@ -85,8 +99,6 @@ ES_SocketManager.prototype.HandleChat = function(socket, data)
 
 ES_SocketManager.prototype.OnFinishFileUpload = function(path)
 {
-
-
   //EMIT SIGNAL
   var io = this.IO();
   io.emit('SIGNAL_MESH_UPLOAD', path);
