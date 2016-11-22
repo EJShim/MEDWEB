@@ -1,4 +1,5 @@
 var AMI = require("ami.js");
+var glslify = require("glslify");
 
 var E_SliceImage = AMI.default.Helpers.Stack;
 var E_Lut = AMI.default.Helpers.Lut;

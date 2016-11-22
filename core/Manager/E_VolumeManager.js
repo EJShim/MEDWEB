@@ -8,6 +8,7 @@ function E_VolumeManager(Mgr)
 {
   this.Mgr = Mgr;
 
+
   this.m_selectedVolumeIdx = -1;
   this.m_volumeList = [];
 
@@ -68,7 +69,6 @@ E_VolumeManager.prototype.ImportVolume = function(buffer)
 E_VolumeManager.AddVolume = function(volume)
 {
   var scene = this.Manager.GetRenderer(this.Manager.VIEW_MAIN).scene;
-
   scene.add(volume);
 
   this.m_volumeList.push(volume);
