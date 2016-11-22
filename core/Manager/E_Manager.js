@@ -1,6 +1,4 @@
-var THREE = require("three");
 var TrackballControls = require('three-trackballcontrols');
-
 var E_MeshManager = require("./E_MeshManager.js");
 var E_VolumeManager = require("./E_VolumeManager.js");
 var E_SocketManager = require("./E_SocketManager.js");

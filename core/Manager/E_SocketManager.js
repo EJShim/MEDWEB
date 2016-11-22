@@ -1,5 +1,3 @@
-var THREE = require("three");
-
 function E_SocketManager(Mgr)
 {
   this.Mgr = Mgr;

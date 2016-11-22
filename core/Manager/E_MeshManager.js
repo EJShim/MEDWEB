@@ -1,4 +1,3 @@
-var THREE = require("three");
 var STLLoader = require('three-stl-loader')(THREE);
 
 function E_MeshManager(Mgr)
