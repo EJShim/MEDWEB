@@ -37,6 +37,18 @@ $$("ID_VIEW_FOOTER").attachEvent("onViewResize", function(){
   Manager.OnResize();
 });
 
+$$("ID_SEGMENT_RESIZE").attachEvent("onChange", function(newV, oldV){
+
+  //console.log(newV);
+
+  if(newV == "ID_BUTTON_VIEW_1VIEW"){
+    Manager.OnViewOneView();
+  }else{
+    Manager.OnViewFourView();
+  }
+});
+
+
 ///Tree Events
 $$("ID_VIEW_TREE").attachEvent("onItemCheck", function(id){
   if(this.isBranch()) return;

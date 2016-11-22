@@ -58,7 +58,13 @@ webix.ui({
       view:"toolbar",
       elements:[
         {id:"ID_UPLOAD_MESH", view:"uploader",  value:"Import Mesh", upload:"/upload", width:100},
-        {id:"ID_UPLOAD_VOLUME", view:"button", value:"Import Dicom", width:100}
+        {id:"ID_UPLOAD_VOLUME", view:"button", value:"Import Dicom", width:100},
+        {
+          view:"segmented", id:"ID_SEGMENT_RESIZE", gravity:0.3, options:[
+            {id:"ID_BUTTON_VIEW_1VIEW", value:"1 View"},
+            {id:"ID_BUTTON_VIEW_4VIEW", value:"4 View"}
+          ]
+        }
       ]
     },
     {
@@ -79,7 +85,7 @@ webix.ui({
               cols:[
                 {id:"ID_VIEW_MAIN", view:"template", gravity:2.5},
                 {view:"resizer"},
-                {
+                { id:"ID_VIEW_2D",
                   rows:[
                     {id:"ID_VIEW_AXL", view:"template"},
                     {view:"resizer"},

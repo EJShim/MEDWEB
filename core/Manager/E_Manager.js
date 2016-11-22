@@ -123,6 +123,19 @@ E_Manager.prototype.Redraw = function()
   this.Render();
 }
 
+E_Manager.prototype.OnViewOneView = function()
+{
+  //HIDE 2D View
+  $$("ID_VIEW_2D").hide();
+  this.OnResize();
+}
+
+E_Manager.prototype.OnViewFourView = function()
+{
+  $$("ID_VIEW_2D").show();
+  this.OnResize();
+}
+
 E_Manager.prototype.UpdateCamera = function()
 {
   //Get Renderer and viewport

@@ -268,6 +268,19 @@ E_Manager.prototype.Redraw = function()
   this.Render();
 }
 
+E_Manager.prototype.OnViewOneView = function()
+{
+  //HIDE 2D View
+  $$("ID_VIEW_2D").hide();
+  this.OnResize();
+}
+
+E_Manager.prototype.OnViewFourView = function()
+{
+  $$("ID_VIEW_2D").show();
+  this.OnResize();
+}
+
 E_Manager.prototype.UpdateCamera = function()
 {
   //Get Renderer and viewport
@@ -658,6 +671,20 @@ $$("ID_VIEW_SAG").attachEvent("onViewResize", function(){
 $$("ID_VIEW_FOOTER").attachEvent("onViewResize", function(){
   Manager.OnResize();
 });
+
+$$("ID_SEGMENT_RESIZE").attachEvent("onChange", function(newV, oldV){
+
+  //console.log(newV);
+
+  if(newV == "ID_BUTTON_VIEW_1VIEW"){
+    Manager.OnViewOneView();
+    console.log("one View");
+  }else{
+    Manager.OnViewFourView();
+    console.log("Four View");
+  }
+});
+
 
 ///Tree Events
 $$("ID_VIEW_TREE").attachEvent("onItemCheck", function(id){
