@@ -96,7 +96,7 @@ E_MeshManager.prototype.RemoveMesh = function(id)
     if(this.m_selectedMeshIdx == -1) return;
     id = this.m_selectedMeshIdx;
   }
-  console.log(id);
+  //console.log(id);
   this.ShowHide(id, false);
 
   //Remove From The Mesh List
