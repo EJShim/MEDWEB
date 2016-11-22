@@ -1,9 +1,67 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
 function E_Histogram()
 {
+  this.renderWindow = $$("ID_VIEW_VOLUME_LUT");
+  this.domElement = document.createElement('canvas');
+  this.domElement.setAttribute("id", "ID_VIEW_LUT");
+
+
+  this.Initialize();
+}
+
+E_Histogram.prototype.Initialize = function()
+{
+  this.renderWindow.getNode().replaceChild(this.domElement, this.renderWindow.getNode().childNodes[0]);
+  this.OnResizeCanvas();
+
+  //Set Attribute ID of canvas
 
 }
 
+E_Histogram.prototype.OnResizeCanvas = function()
+{
+  this.domElement.width = this.renderWindow.$width;
+  this.domElement.height = this.renderWindow.$height;
+}
+
+E_Histogram.prototype.Update = function(lut)
+{
+  var ctx = this.domElement.getContext('2d');
+  ctx.clearRect(0, 0, this.domElement.width, this.domElement.height);
+
+  var color = ctx.createLinearGradient(0, 0, this.domElement.width, 0);
+
+  for(var i=0 ; i<lut._color.length ; i++){
+    color.addColorStop(lut._color[i][0], 'rgba(' + Math.round(lut._color[i][1] * 255) + ", " + Math.round(lut._color[i][2] * 255) + "," + Math.round(lut._color[i][3] * 255) + ", 1)" );
+  }
+
+  ctx.fillStyle = color;
+  ctx.fillRect(0, 0, this.domElement.width, this.domElement.height);
+
+  var opacity = ctx.createLinearGradient(0, 0, this.domElement.width, 0);
+
+  for(var i=0 ; i<lut._opacity.length ; i++){
+    opacity.addColorStop(lut._opacity[i][0], "rgb(255, 255, 255, " + lut._opacity[i][1] + ")");
+  }
+
+  ctx.fillStyle = opacity;
+  ctx.fillRect(0, 0, this.domElement.width, this.domElement.height);
+
+  //Add Opacity Point
+  ctx.globalCompositeOperation = "source-over";
+
+  for(var i=0 ; i<lut._opacity.length ; i++){
+
+    var x = lut._opacity[i][0] * this.domElement.width;
+    var y = this.domElement.height - lut._opacity[i][1] * this.domElement.height;
+
+    ctx.lineTo(x, y);
+    ctx.arc(x, y, 2, 0, 2*Math.PI, true);
+
+    ctx.moveTo(x, y);
+  }
+
+}
 
 module.exports = E_Histogram;
 
@@ -34,6 +92,8 @@ function E_Volume(stack)
     m_sliceImage[i] = new E_SliceImage(stack);
   }
 
+  var m_lut = new E_Lut("ID_VIEW_VOLUME_LUT", "default", "linear");
+
 
   //Scene for Double Pass Rendering
   var m_sceneRTT = new THREE.Scene();
@@ -43,6 +103,11 @@ function E_Volume(stack)
 
   this.GetVolumeData = function(){
     return m_volumeData;
+  }
+
+  this.GetLUT = function()
+  {
+    return m_lut;
   }
 
   this.GetSliceImage = function(idx)
@@ -70,6 +135,7 @@ E_Volume.prototype = Object.create(THREE.Mesh.prototype);
 
 E_Volume.prototype.Initialize = function()
 {
+  //Initialize Slice Image
   var sliceImages = this.GetSliceImage();
 
   //Main View Slice Image
@@ -86,6 +152,229 @@ E_Volume.prototype.Initialize = function()
   sliceImages[3].bBox.visible = false;
   sliceImages[3].border.color = 0x0000F4;
 
+
+
+  //Initialize LUT
+  var lut = this.GetLUT();
+  var range = this.GetVolumeData().minMax;
+  var width = range[1] - range[0];
+
+  var CTPbone = [
+    [0, 0, 0, 0],
+    [.2, .73, .25, .30],
+    [.6, .9, .82, .56],
+    [1, 1, 1, 1]
+  ];
+
+  var OTPBone = [
+    [0, 0],
+    [1, 1]
+  ]
+
+  lut._color = CTPbone;
+  lut._opacity = OTPbone;
+}
+
+E_Volume.prototype.MoveSliceImage = function( value )
+{
+  var sliceImages = this.GetSliceImage();
+  if(value > 0){
+    if(this.GetSliceImage(0).index >= this.GetVolumeData().dimensionsIJK.z -1 ) return;
+
+    for(var i in sliceImages){
+      sliceImages[i].index++;
+    }
+  }else{
+    if(this.GetSliceImage(0).index <= 0) return;
+    for(var i in sliceImages){
+      sliceImages[i].index--;
+    }
+  }
+}
+
+E_Volume.prototype.GetBoundingBox = function(){
+  return this.GetVolumeData().uniforms.uWorldBBox.value;
+}
+
+E_Volume.prototype.GetCenter = function(){
+  return this.GetVolumeData().worldCenter();
+}
+
+E_Volume.prototype.SetCustomShader = function()
+{
+  //var offset = new THREE.Vector3(-0.5, -0.5, -0.5);
+  var data = this.GetVolumeData();
+
+  var boxGeometry = new THREE.BoxGeometry(
+    data.dimensionsIJK.x-1,
+    data.dimensionsIJK.y-1,
+    data.dimensionsIJK.z-1
+  );
+
+  boxGeometry.applyMatrix(new THREE.Matrix4().makeTranslation(
+    data.halfDimensionsIJK.x - 0.5,
+    data.halfDimensionsIJK.y - 0.5,
+    data.halfDimensionsIJK.z - 0.5
+  ));
+
+  var uniformFirstPass = this.firstPassUniforms();
+  uniformFirstPass.uWorldBBox.value = data.worldBoundingBox();
+
+  var materialFirstPass = new THREE.ShaderMaterial({
+    uniforms:uniformFirstPass,
+    vertexShader:"VERTEX_SHADER",
+    fragmentShader:"FRAGMENT_SHADER",
+    side:THREE.BackSide
+  });
+
+  var boxMeshFirstPass = new THREE.Mesh(boxGeometry, materialFirstPass);
+  boxMeshFirstPass.applyMatrix(data,_ijk2LPS);
+  this.GetSceneRTT().add(boxMeshFirstPass);
+
+  //Second Pass
+  var textures = []
+  for(var i=0 ; i<data.rawData.length ; i++){
+    var tex = new THREE.DataTexture(
+      data.rawData[i],
+      data.textureSize,
+      data.textureSize,
+      data.textureType,
+      THREE.UnsignedByteType,
+      THREE.UVMapping,
+      THREE.ClampToEdgeWrapping,
+      THREE.ClampToEdgeWrapping,
+      THREE.NearestFilter,
+      THREE.NearestFilter
+    );
+    tex.needsUpdate = true;
+    tex.flipY = true;
+    textures.push(tex);
+  }
+
+  var uniformSecondPass = this.SecondPassUniforms();
+  uniformSecondPass.uTextureSize.value = data.textureSize;
+  uniformSecondPass.uTextureContainer.value = textures;
+  uniformSecondPass.uWorldToData.value = data.lps2IJK;
+  uniformSecondPass.uNumberOfChannels.value = data.numberOfChannels;
+  uniformSecondPass.uBitsAllocated.value = data.bitsAllocated;
+  uniformSecondPass.uWindowCenterWidth.value = [data.windowCenter, data.windowWidth];
+  uniformSecondPass.uRescaleSlopeIntercept.value = [data.rescaleSlope, data.rescaleIntercept];
+  uniformSecondPass.uTextureBlock.value = this.GetRTT().texture;
+  uniformSecondPass.uWorldBBox.value = data.worldBoundingBox();
+  uniformSecondPass.uLut.value = 1;
+  uniformSecondPass.uDataDimensions.value = [data.dimensionsIJK.x,data.dimensionsIJK.y,data.dimensionsIJK.z];
+  uniformSecondPass.uSteps.value = 512;
+  uniformSecondPass.uInterpolation = 1;
+
+  var materialSecondPass = new THREE.ShaderMaterial({
+    uniforms:uniformSecondPass,
+    vertexShader:"SECOND_VERT",
+    fragmentShader:"SECOND_FRAG",
+    side:THREE.FrontSide,
+    transparent:true
+  });
+
+
+  this.geometry = boxGeometry;
+  this.material = materialSecondPass;
+  this.applyMatrix(data._ijk2LPS);
+}
+
+E_Volume.prototype.UpdateLUT = function()
+{
+  var lut = this.GetLut();
+
+  lut.paintCanvas();
+
+  this.material.uniforms.uTextureLUT.value = lut.texture;
+}
+
+E_Volume.prototype.firstPassUniforms = function()
+{
+  return{
+    'uWorldBBox':{
+      type:'fv1',
+      value:[0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+    }
+  };
+}
+
+E_Volume.prototype.SecondPassUniforms = function()
+{
+  return {
+      'uTextureSize': {
+        type: 'i',
+        value: 0
+      },
+      'uTextureContainer': {
+        type: 'tv',
+        value: []
+      },
+      'uDataDimensions': {
+        type: 'iv',
+        value: [0, 0, 0]
+      },
+      'uWorldToData': {
+        type: 'm4',
+        value: new THREE.Matrix4()
+      },
+      'uWindowCenterWidth': {
+        type: 'fv1',
+        value: [0.0, 0.0]
+      },
+      'uRescaleSlopeIntercept': {
+        type: 'fv1',
+        value: [0.0, 0.0]
+      },
+      'uNumberOfChannels': {
+        type: 'i',
+        value: 1
+      },
+      'uBitsAllocated': {
+        type: 'i',
+        value: 8
+      },
+      'uTextureBack': {
+        type: 't',
+        value: null
+      },
+      'uWorldBBox': {
+        type: 'fv1',
+        value: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+      },
+      'uSteps': {
+        type: 'i',
+        value: 256
+      },
+      'uLut': {
+        type: 'i',
+        value: 0
+      },
+      'uTextureLUT':{
+        type: 't',
+        value: []
+      },
+      'uAlphaCorrection':{
+        type: 'f',
+        value: 1.0
+      },
+      'uFrequence':{
+        type: 'f',
+        value: 0.0
+      },
+      'uAmplitude':{
+        type: 'f',
+        value: 0.0
+      },
+      'uPixelType': {
+        type: 'i',
+        value: 0
+      },
+      'uInterpolation': {
+        type: 'i',
+        value: 0
+      }
+    };
 }
 
 module.exports = E_Volume;
@@ -302,6 +591,18 @@ E_Manager.prototype.Render = function()
 
   //Render
   for(var i in renderer){
+
+      if(i == this.VIEW_MAIN && this.VolumeMgr().m_selectedVolumeIdx != -1){
+        //Volume Rendering
+        var volume = this.VolumeMgr().GetSelectedVolume();
+
+        var sceneRTT = volume.GetSceneRTT();
+        var RTT = volume.GetRTT();
+
+        renderer[i].render(sceneRTT, renderer[i].camera, RTT, true);
+      }
+
+
       renderer[i].render(renderer[i].scene, renderer[i].camera);
   }
 }
@@ -346,6 +647,9 @@ E_Manager.prototype.UpdateWindowSize = function()
     renderer[i].camera.updateProjectionMatrix();
     renderer[i].control.handleResize();
   }
+
+  //Update Histogram canvas
+  this.VolumeMgr().GetHistogram().OnResizeCanvas();
 }
 
 
@@ -607,6 +911,8 @@ E_SocketManager.prototype.HandleChat = function(data){
 module.exports = E_SocketManager;
 
 },{}],7:[function(require,module,exports){
+var AMI = require("ami.js");
+var E_DicomLoader = AMI.default.Loaders.Volume;
 var E_Volume = require("../Data/E_Volume.js");
 var E_Histogram = require("../Data/E_Histogram.js");
 
@@ -627,12 +933,73 @@ function E_VolumeManager(Mgr)
 
 E_VolumeManager.prototype.ImportVolume = function(buffer)
 {
+  var that = this;
 
+  var loader = new E_DicomLoader();
+  var files = buffer;
+
+  var seriesContainer = [];
+  var loadSequence = [];
+
+  files.forEach(function(url){
+    loadSequence.push(
+      Promise.resolve()
+      .then(function(){
+        return loader.fetch(url);
+      })
+      .then(function(data){
+        return loader.parse(data);
+      })
+      .then(function(series){
+        seriesContainer.push(series);
+      })
+      .catch(function(error){
+        console.log("Volume Import Error : " + error);
+      })
+    );
+  });
+
+  Promise.all(loadSequence)
+  .then(function(){
+    loader.free();
+    loader = null;
+
+    var series = seriesContainer[0].mergeSeries(seriesContainer);
+    var data = series[0].stack[0];
+
+    var volume = new E_Volume(stack);
+    that.AddVolume(volume);
+  })
+  .then(function(){
+    that.Manager.Redraw();
+  })
+  .catch(function(error){
+    console.log("Volme Add Error: " + error);
+  })
+}
+
+E_VolumeManager.AddVolume = function(volume)
+{
+  var scene = this.Manager.GetRenderer(this.Manager.VIEW_MAIN).scene;
+
+  scene.add(volume);
+
+  this.m_volumeList.push(volume);
+  this.SetSelectedVolume(this.m_volumeList.length -1);
+}
+
+E_VolumeManager.prototype.SetSelectedVolume = function(idx){
+  this.m_selectedVolumeIdx = idx;
+}
+
+E_VolumeManager.prototype.GetSelectedVolume = function()
+{
+  return this.m_volumeList[ this.m_selectedVolumeIdx ];
 }
 
 module.exports = E_VolumeManager;
 
-},{"../Data/E_Histogram.js":1,"../Data/E_Volume.js":2}],8:[function(require,module,exports){
+},{"../Data/E_Histogram.js":1,"../Data/E_Volume.js":2,"ami.js":12}],8:[function(require,module,exports){
 //Define Header
 var E_Manager = require("./E_Manager.js");
 
@@ -678,10 +1045,8 @@ $$("ID_SEGMENT_RESIZE").attachEvent("onChange", function(newV, oldV){
 
   if(newV == "ID_BUTTON_VIEW_1VIEW"){
     Manager.OnViewOneView();
-    console.log("one View");
   }else{
     Manager.OnViewFourView();
-    console.log("Four View");
   }
 });
 

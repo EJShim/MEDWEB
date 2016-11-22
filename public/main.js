@@ -75,7 +75,8 @@ webix.ui({
           rows:[
             {id:"ID_VIEW_TREE",view:"tree",template:"{common.icon()} {common.checkbox()} {common.folder()} #value#", data:tree_data},//first column,
             {view:"resizer"},
-            propertysheet_1
+            propertysheet_1,
+            {id:"ID_VIEW_VOLUME_LUT", view:"template"}
           ]
         },
         {view:"resizer"},
