@@ -3,13 +3,14 @@ var glslify = require("glslify");
 var E_SliceImage = AMI.default.Helpers.Stack;
 var E_Lut = AMI.default.Helpers.Lut;
 
-
 function E_Volume(stack)
 {
   this.SLICE_3D = 0;
   this.SLICE_AXL = 1;
   this.SLICE_COR = 2;
   this.SLICE_SAG = 3;
+
+  this.actor = null;
 
   //Prepare Volume Data
   var m_volumeData = stack;
@@ -21,10 +22,10 @@ function E_Volume(stack)
   //Init Slice Image
   var m_sliceImages = [];
   for(var i=0 ; i<4 ; i++){
-    m_sliceImage[i] = new E_SliceImage(stack);
+    m_sliceImages[i] = new E_SliceImage(stack);
   }
 
-  var m_lut = new E_Lut("ID_VIEW_VOLUME_LUT", "default", "linear");
+  var m_lut = new E_Lut("ID_VIEW_LUT", "default", "linear");
 
 
   //Scene for Double Pass Rendering
@@ -57,6 +58,8 @@ function E_Volume(stack)
   }
 
   this.Initialize();
+  this.SetCustomShader();
+  this.UpdateLUT();
 
   ///
   THREE.Mesh.call(this);
@@ -71,17 +74,17 @@ E_Volume.prototype.Initialize = function()
   var sliceImages = this.GetSliceImage();
 
   //Main View Slice Image
-  sliceImages[0].bBox.visible = true;
+  sliceImages[0].bbox.visible = true;
   sliceImages[0].border.color = 0xF44336;
 
   //AXL View Slice Image
-  sliceImages[1].bBox.visible = false;
+  sliceImages[1].bbox.visible = false;
   sliceImages[1].border.color = 0xF40000;
 
-  sliceImages[2].bBox.visible = false;
+  sliceImages[2].bbox.visible = false;
   sliceImages[2].border.color = 0x00F400;
 
-  sliceImages[3].bBox.visible = false;
+  sliceImages[3].bbox.visible = false;
   sliceImages[3].border.color = 0x0000F4;
 
 
@@ -98,7 +101,7 @@ E_Volume.prototype.Initialize = function()
     [1, 1, 1, 1]
   ];
 
-  var OTPBone = [
+  var OTPbone = [
     [0, 0],
     [1, 1]
   ]
@@ -160,7 +163,8 @@ E_Volume.prototype.SetCustomShader = function()
   });
 
   var boxMeshFirstPass = new THREE.Mesh(boxGeometry, materialFirstPass);
-  boxMeshFirstPass.applyMatrix(data,_ijk2LPS);
+
+  boxMeshFirstPass.applyMatrix(data._ijk2LPS);
   this.GetSceneRTT().add(boxMeshFirstPass);
 
   //Second Pass
@@ -191,7 +195,7 @@ E_Volume.prototype.SetCustomShader = function()
   uniformSecondPass.uBitsAllocated.value = data.bitsAllocated;
   uniformSecondPass.uWindowCenterWidth.value = [data.windowCenter, data.windowWidth];
   uniformSecondPass.uRescaleSlopeIntercept.value = [data.rescaleSlope, data.rescaleIntercept];
-  uniformSecondPass.uTextureBlock.value = this.GetRTT().texture;
+  uniformSecondPass.uTextureBack.value = this.GetRTT().texture;
   uniformSecondPass.uWorldBBox.value = data.worldBoundingBox();
   uniformSecondPass.uLut.value = 1;
   uniformSecondPass.uDataDimensions.value = [data.dimensionsIJK.x,data.dimensionsIJK.y,data.dimensionsIJK.z];
@@ -207,18 +211,28 @@ E_Volume.prototype.SetCustomShader = function()
   });
 
 
-  this.geometry = boxGeometry;
-  this.material = materialSecondPass;
-  this.applyMatrix(data._ijk2LPS);
+  //this = new THREE.Mesh(boxGeometry, materialSecondPass);
+  // this.geometry.needsUpdate = true;
+  // this.geometry = boxGeometry;
+  //
+  // this.material.needsUpdate = true;
+  // this.material = materialSecondPass;
+  this.actor = new THREE.Mesh(boxGeometry, materialSecondPass);
+
+  this.actor.applyMatrix(data._ijk2LPS);
 }
 
 E_Volume.prototype.UpdateLUT = function()
 {
-  var lut = this.GetLut();
-
+  var lut = this.GetLUT();
   lut.paintCanvas();
 
-  this.material.uniforms.uTextureLUT.value = lut.texture;
+  this.actor.material.uniforms.uTextureLUT.value = lut.texture;
+}
+
+E_Volume.prototype.AddToRenderer = function(renderer)
+{
+  renderer.scene.add(this.actor);
 }
 
 E_Volume.prototype.firstPassUniforms = function()

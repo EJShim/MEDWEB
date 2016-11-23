@@ -41,7 +41,7 @@ E_Histogram.prototype.Update = function(lut)
   var opacity = ctx.createLinearGradient(0, 0, this.domElement.width, 0);
 
   for(var i=0 ; i<lut._opacity.length ; i++){
-    opacity.addColorStop(lut._opacity[i][0], "rgb(255, 255, 255, " + lut._opacity[i][1] + ")");
+    opacity.addColorStop(lut._opacity[i][0], "rgba(255, 255, 255, " + lut._opacity[i][1] + ")");
   }
 
   ctx.fillStyle = opacity;
@@ -57,6 +57,7 @@ E_Histogram.prototype.Update = function(lut)
 
     ctx.lineTo(x, y);
     ctx.arc(x, y, 2, 0, 2*Math.PI, true);
+    ctx.stroke();
 
     ctx.moveTo(x, y);
   }
@@ -71,13 +72,14 @@ var glslify = require("glslify");
 var E_SliceImage = AMI.default.Helpers.Stack;
 var E_Lut = AMI.default.Helpers.Lut;
 
-
 function E_Volume(stack)
 {
   this.SLICE_3D = 0;
   this.SLICE_AXL = 1;
   this.SLICE_COR = 2;
   this.SLICE_SAG = 3;
+
+  this.actor = null;
 
   //Prepare Volume Data
   var m_volumeData = stack;
@@ -89,10 +91,10 @@ function E_Volume(stack)
   //Init Slice Image
   var m_sliceImages = [];
   for(var i=0 ; i<4 ; i++){
-    m_sliceImage[i] = new E_SliceImage(stack);
+    m_sliceImages[i] = new E_SliceImage(stack);
   }
 
-  var m_lut = new E_Lut("ID_VIEW_VOLUME_LUT", "default", "linear");
+  var m_lut = new E_Lut("ID_VIEW_LUT", "default", "linear");
 
 
   //Scene for Double Pass Rendering
@@ -125,6 +127,8 @@ function E_Volume(stack)
   }
 
   this.Initialize();
+  this.SetCustomShader();
+  this.UpdateLUT();
 
   ///
   THREE.Mesh.call(this);
@@ -139,17 +143,17 @@ E_Volume.prototype.Initialize = function()
   var sliceImages = this.GetSliceImage();
 
   //Main View Slice Image
-  sliceImages[0].bBox.visible = true;
+  sliceImages[0].bbox.visible = true;
   sliceImages[0].border.color = 0xF44336;
 
   //AXL View Slice Image
-  sliceImages[1].bBox.visible = false;
+  sliceImages[1].bbox.visible = false;
   sliceImages[1].border.color = 0xF40000;
 
-  sliceImages[2].bBox.visible = false;
+  sliceImages[2].bbox.visible = false;
   sliceImages[2].border.color = 0x00F400;
 
-  sliceImages[3].bBox.visible = false;
+  sliceImages[3].bbox.visible = false;
   sliceImages[3].border.color = 0x0000F4;
 
 
@@ -166,7 +170,7 @@ E_Volume.prototype.Initialize = function()
     [1, 1, 1, 1]
   ];
 
-  var OTPBone = [
+  var OTPbone = [
     [0, 0],
     [1, 1]
   ]
@@ -228,7 +232,8 @@ E_Volume.prototype.SetCustomShader = function()
   });
 
   var boxMeshFirstPass = new THREE.Mesh(boxGeometry, materialFirstPass);
-  boxMeshFirstPass.applyMatrix(data,_ijk2LPS);
+
+  boxMeshFirstPass.applyMatrix(data._ijk2LPS);
   this.GetSceneRTT().add(boxMeshFirstPass);
 
   //Second Pass
@@ -259,7 +264,7 @@ E_Volume.prototype.SetCustomShader = function()
   uniformSecondPass.uBitsAllocated.value = data.bitsAllocated;
   uniformSecondPass.uWindowCenterWidth.value = [data.windowCenter, data.windowWidth];
   uniformSecondPass.uRescaleSlopeIntercept.value = [data.rescaleSlope, data.rescaleIntercept];
-  uniformSecondPass.uTextureBlock.value = this.GetRTT().texture;
+  uniformSecondPass.uTextureBack.value = this.GetRTT().texture;
   uniformSecondPass.uWorldBBox.value = data.worldBoundingBox();
   uniformSecondPass.uLut.value = 1;
   uniformSecondPass.uDataDimensions.value = [data.dimensionsIJK.x,data.dimensionsIJK.y,data.dimensionsIJK.z];
@@ -275,18 +280,28 @@ E_Volume.prototype.SetCustomShader = function()
   });
 
 
-  this.geometry = boxGeometry;
-  this.material = materialSecondPass;
-  this.applyMatrix(data._ijk2LPS);
+  //this = new THREE.Mesh(boxGeometry, materialSecondPass);
+  // this.geometry.needsUpdate = true;
+  // this.geometry = boxGeometry;
+  //
+  // this.material.needsUpdate = true;
+  // this.material = materialSecondPass;
+  this.actor = new THREE.Mesh(boxGeometry, materialSecondPass);
+
+  this.actor.applyMatrix(data._ijk2LPS);
 }
 
 E_Volume.prototype.UpdateLUT = function()
 {
-  var lut = this.GetLut();
-
+  var lut = this.GetLUT();
   lut.paintCanvas();
 
-  this.material.uniforms.uTextureLUT.value = lut.texture;
+  this.actor.material.uniforms.uTextureLUT.value = lut.texture;
+}
+
+E_Volume.prototype.AddToRenderer = function(renderer)
+{
+  renderer.scene.add(this.actor);
 }
 
 E_Volume.prototype.firstPassUniforms = function()
@@ -650,6 +665,10 @@ E_Manager.prototype.UpdateWindowSize = function()
 
   //Update Histogram canvas
   this.VolumeMgr().GetHistogram().OnResizeCanvas();
+  if(this.VolumeMgr().m_selectedVolumeIdx != -1){
+    var volume = this.VolumeMgr().GetSelectedVolume();
+    this.VolumeMgr().GetHistogram().Update(volume.GetLUT());
+  }
 }
 
 
@@ -956,7 +975,7 @@ E_VolumeManager.prototype.ImportVolume = function(buffer)
         seriesContainer.push(series);
       })
       .catch(function(error){
-        console.log("Volume Import Error : " + error);
+        window.console.log("Volume Import Error : " + error);
       })
     );
   });
@@ -969,21 +988,22 @@ E_VolumeManager.prototype.ImportVolume = function(buffer)
     var series = seriesContainer[0].mergeSeries(seriesContainer);
     var data = series[0].stack[0];
 
-    var volume = new E_Volume(stack);
-    that.AddVolume(volume);
+    var volume = new E_Volume(data);
+    return volume
   })
-  .then(function(){
-    that.Manager.Redraw();
+  .then(function(volume){
+    that.AddVolume(volume);
+    that.Mgr.Redraw();
   })
   .catch(function(error){
     console.log("Volme Add Error: " + error);
   })
 }
 
-E_VolumeManager.AddVolume = function(volume)
+E_VolumeManager.prototype.AddVolume = function(volume)
 {
-  var scene = this.Manager.GetRenderer(this.Manager.VIEW_MAIN).scene;
-  scene.add(volume);
+  var renderer = this.Mgr.GetRenderer(this.Mgr.VIEW_MAIN);
+  volume.AddToRenderer(renderer)
 
   this.m_volumeList.push(volume);
   this.SetSelectedVolume(this.m_volumeList.length -1);
@@ -991,11 +1011,20 @@ E_VolumeManager.AddVolume = function(volume)
 
 E_VolumeManager.prototype.SetSelectedVolume = function(idx){
   this.m_selectedVolumeIdx = idx;
+  this.UpdateHistogram();
 }
 
 E_VolumeManager.prototype.GetSelectedVolume = function()
 {
   return this.m_volumeList[ this.m_selectedVolumeIdx ];
+}
+
+E_VolumeManager.prototype.UpdateHistogram = function()
+{
+  if(this.m_selectedVolumeIdx == -1) return;
+  var lut = this.GetSelectedVolume().GetLUT();
+
+  this.GetHistogram().Update(lut)
 }
 
 module.exports = E_VolumeManager;
@@ -1075,6 +1104,31 @@ $$("ID_VIEW_TREE").attachEvent("onKeyPress", function(code, e){
     Manager.MeshMgr().BroadcastMeshRemove();
     Manager.MeshMgr().RemoveMesh();
   }
+});
+
+$$("ID_UPLOAD_VOLUME").attachEvent("onItemClick", function(){
+  var parent = $$("ID_UPLOAD_VOLUME").getNode().childNodes[0];
+
+  //Create File Dialog
+  var fileDialog = document.createElement("input");
+  fileDialog.setAttribute("type", "file");
+  fileDialog.setAttribute("multiple", true);
+  fileDialog.click();
+  parent.appendChild(fileDialog);
+
+  fileDialog.addEventListener("change", function(ev){
+  //console.log(ev.target.files);
+
+  var buffer = []
+  for(var i=0 ; i<ev.target.files.length ; i++){
+    var path = URL.createObjectURL(ev.target.files[i]);
+    buffer.push(path);
+  }
+  Manager.VolumeMgr().ImportVolume(buffer);
+
+  //Remove File Dialog Element
+  parent.removeChild(fileDialog);
+  });
 });
 
 

@@ -216,6 +216,10 @@ E_Manager.prototype.UpdateWindowSize = function()
 
   //Update Histogram canvas
   this.VolumeMgr().GetHistogram().OnResizeCanvas();
+  if(this.VolumeMgr().m_selectedVolumeIdx != -1){
+    var volume = this.VolumeMgr().GetSelectedVolume();
+    this.VolumeMgr().GetHistogram().Update(volume.GetLUT());
+  }
 }
 
 

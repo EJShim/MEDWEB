@@ -40,7 +40,7 @@ E_Histogram.prototype.Update = function(lut)
   var opacity = ctx.createLinearGradient(0, 0, this.domElement.width, 0);
 
   for(var i=0 ; i<lut._opacity.length ; i++){
-    opacity.addColorStop(lut._opacity[i][0], "rgb(255, 255, 255, " + lut._opacity[i][1] + ")");
+    opacity.addColorStop(lut._opacity[i][0], "rgba(255, 255, 255, " + lut._opacity[i][1] + ")");
   }
 
   ctx.fillStyle = opacity;
@@ -56,6 +56,7 @@ E_Histogram.prototype.Update = function(lut)
 
     ctx.lineTo(x, y);
     ctx.arc(x, y, 2, 0, 2*Math.PI, true);
+    ctx.stroke();
 
     ctx.moveTo(x, y);
   }

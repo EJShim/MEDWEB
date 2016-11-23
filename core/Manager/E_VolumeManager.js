@@ -43,7 +43,7 @@ E_VolumeManager.prototype.ImportVolume = function(buffer)
         seriesContainer.push(series);
       })
       .catch(function(error){
-        console.log("Volume Import Error : " + error);
+        window.console.log("Volume Import Error : " + error);
       })
     );
   });
@@ -56,21 +56,22 @@ E_VolumeManager.prototype.ImportVolume = function(buffer)
     var series = seriesContainer[0].mergeSeries(seriesContainer);
     var data = series[0].stack[0];
 
-    var volume = new E_Volume(stack);
-    that.AddVolume(volume);
+    var volume = new E_Volume(data);
+    return volume
   })
-  .then(function(){
-    that.Manager.Redraw();
+  .then(function(volume){
+    that.AddVolume(volume);
+    that.Mgr.Redraw();
   })
   .catch(function(error){
     console.log("Volme Add Error: " + error);
   })
 }
 
-E_VolumeManager.AddVolume = function(volume)
+E_VolumeManager.prototype.AddVolume = function(volume)
 {
-  var scene = this.Manager.GetRenderer(this.Manager.VIEW_MAIN).scene;
-  scene.add(volume);
+  var renderer = this.Mgr.GetRenderer(this.Mgr.VIEW_MAIN);
+  volume.AddToRenderer(renderer)
 
   this.m_volumeList.push(volume);
   this.SetSelectedVolume(this.m_volumeList.length -1);
@@ -78,11 +79,20 @@ E_VolumeManager.AddVolume = function(volume)
 
 E_VolumeManager.prototype.SetSelectedVolume = function(idx){
   this.m_selectedVolumeIdx = idx;
+  this.UpdateHistogram();
 }
 
 E_VolumeManager.prototype.GetSelectedVolume = function()
 {
   return this.m_volumeList[ this.m_selectedVolumeIdx ];
+}
+
+E_VolumeManager.prototype.UpdateHistogram = function()
+{
+  if(this.m_selectedVolumeIdx == -1) return;
+  var lut = this.GetSelectedVolume().GetLUT();
+
+  this.GetHistogram().Update(lut)
 }
 
 module.exports = E_VolumeManager;

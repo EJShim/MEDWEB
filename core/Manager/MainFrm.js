@@ -74,6 +74,31 @@ $$("ID_VIEW_TREE").attachEvent("onKeyPress", function(code, e){
   }
 });
 
+$$("ID_UPLOAD_VOLUME").attachEvent("onItemClick", function(){
+  var parent = $$("ID_UPLOAD_VOLUME").getNode().childNodes[0];
+
+  //Create File Dialog
+  var fileDialog = document.createElement("input");
+  fileDialog.setAttribute("type", "file");
+  fileDialog.setAttribute("multiple", true);
+  fileDialog.click();
+  parent.appendChild(fileDialog);
+
+  fileDialog.addEventListener("change", function(ev){
+  //console.log(ev.target.files);
+
+  var buffer = []
+  for(var i=0 ; i<ev.target.files.length ; i++){
+    var path = URL.createObjectURL(ev.target.files[i]);
+    buffer.push(path);
+  }
+  Manager.VolumeMgr().ImportVolume(buffer);
+
+  //Remove File Dialog Element
+  parent.removeChild(fileDialog);
+  });
+});
+
 
 ///Chat module
 $$("ID_CHAT_INPUT").attachEvent("onKeyPress", function(code, e){
