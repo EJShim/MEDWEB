@@ -8,18 +8,15 @@
     "express": "~4.13.1",
     "multiparty": "^4.1.2",
     "socket.io": "^1.5.1",
-    "three": "^0.82.1",
     "three-stl-loader": "^1.0.4",
     "three-trackballcontrols": "0.0.5"
   },
   "devDependencies": {
-    "ami": "0.0.2",
     "ami.js": "0.0.10",
     "babel": "^6.5.2",
     "babelify": "^7.3.0",
     "browserify": "^13.1.0",
     "glslify": "^6.0.1",
-    "three-glslify": "^2.0.2",
     "watchify": "^3.7.0"
   },
   "repository": {
@@ -29,5 +26,8 @@
   "scripts": {
     "build": "browserify core/Manager/MainFrm.js -o public/app.js",
     "start": "node server.js"
+  },
+  "browserify": {
+    "transform": ["glslify"]
   }
 }

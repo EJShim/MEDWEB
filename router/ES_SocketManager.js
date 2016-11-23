@@ -28,6 +28,8 @@ ES_SocketManager.prototype.HandleSignal = function()
   io.sockets.on('connection', function(socket){
     //Initialize Chat
     console.log("New Connection!!");
+    console.log(socket.handshake.address);
+
     socket.emit("SIGNAL_JOIN_CALLBACK", socket.id);
     socket.broadcast.emit("SIGNAL_JOIN", socket.id);
 

@@ -6,8 +6,9 @@ var E_Histogram = require("../Data/E_Histogram.js");
 
 function E_VolumeManager(Mgr)
 {
-  this.Mgr = Mgr;
 
+
+  this.Mgr = Mgr;
 
   this.m_selectedVolumeIdx = -1;
   this.m_volumeList = [];

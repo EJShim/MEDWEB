@@ -1,6 +1,5 @@
 var AMI = require("ami.js");
 var glslify = require("glslify");
-
 var E_SliceImage = AMI.default.Helpers.Stack;
 var E_Lut = AMI.default.Helpers.Lut;
 
@@ -155,8 +154,8 @@ E_Volume.prototype.SetCustomShader = function()
 
   var materialFirstPass = new THREE.ShaderMaterial({
     uniforms:uniformFirstPass,
-    vertexShader:"VERTEX_SHADER",
-    fragmentShader:"FRAGMENT_SHADER",
+    vertexShader:glslify.file("../GLSL/Volume_FirstPass.vert"),
+    fragmentShader:glslify.file("../GLSL/Volume_FirstPass.frag"),
     side:THREE.BackSide
   });
 
@@ -201,8 +200,8 @@ E_Volume.prototype.SetCustomShader = function()
 
   var materialSecondPass = new THREE.ShaderMaterial({
     uniforms:uniformSecondPass,
-    vertexShader:"SECOND_VERT",
-    fragmentShader:"SECOND_FRAG",
+    vertexShader:glslify("../GLSL/Volume_SecondPass.vert"),
+    fragmentShader:glslify("../GLSL/Volume_SecondPass.frag"),
     side:THREE.FrontSide,
     transparent:true
   });
