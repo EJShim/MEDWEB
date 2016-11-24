@@ -158,15 +158,15 @@ E_Manager.prototype.Render = function()
   //Render
   for(var i in renderer){
 
-      if(i == this.VIEW_MAIN && this.VolumeMgr().m_selectedVolumeIdx != -1){
-        //Volume Rendering
-        var volume = this.VolumeMgr().GetSelectedVolume();
-
-        var sceneRTT = volume.GetSceneRTT();
-        var RTT = volume.GetRTT();
-
-        renderer[i].render(sceneRTT, renderer[i].camera, RTT, true);
-      }
+      // if(i == this.VIEW_MAIN && this.VolumeMgr().m_selectedVolumeIdx != -1){
+      //   //Volume Rendering
+      //   var volume = this.VolumeMgr().GetSelectedVolume();
+      //
+      //   var sceneRTT = volume.GetSceneRTT();
+      //   var RTT = volume.GetRTT();
+      //
+      //   renderer[i].render(sceneRTT, renderer[i].camera, RTT, true);
+      // }
 
 
       renderer[i].render(renderer[i].scene, renderer[i].camera);

@@ -26,6 +26,7 @@ E_Histogram.prototype.OnResizeCanvas = function()
 
 E_Histogram.prototype.Update = function(lut)
 {
+  this.OnResizeCanvas();
   var ctx = this.domElement.getContext('2d');
   ctx.clearRect(0, 0, this.domElement.width, this.domElement.height);
 
@@ -38,6 +39,8 @@ E_Histogram.prototype.Update = function(lut)
   ctx.fillStyle = color;
   ctx.fillRect(0, 0, this.domElement.width, this.domElement.height);
 
+  ctx.globalCompositeOperation = "destination-over"
+
   var opacity = ctx.createLinearGradient(0, 0, this.domElement.width, 0);
 
   for(var i=0 ; i<lut._opacity.length ; i++){
@@ -47,6 +50,7 @@ E_Histogram.prototype.Update = function(lut)
   ctx.fillStyle = opacity;
   ctx.fillRect(0, 0, this.domElement.width, this.domElement.height);
 
+
   //Add Opacity Point
   ctx.globalCompositeOperation = "source-over";
 
@@ -55,10 +59,10 @@ E_Histogram.prototype.Update = function(lut)
     var x = lut._opacity[i][0] * this.domElement.width;
     var y = this.domElement.height - lut._opacity[i][1] * this.domElement.height;
 
+
     ctx.lineTo(x, y);
     ctx.arc(x, y, 2, 0, 2*Math.PI, true);
     ctx.stroke();
-
     ctx.moveTo(x, y);
   }
 
@@ -78,6 +82,7 @@ function E_Volume(stack)
   this.SLICE_AXL = 1;
   this.SLICE_COR = 2;
   this.SLICE_SAG = 3;
+
 
   this.actor = null;
 
@@ -99,7 +104,7 @@ function E_Volume(stack)
 
   //Scene for Double Pass Rendering
   var m_sceneRTT = new THREE.Scene();
-  var m_RTT = new THREE.WebGLRenderTarget( window.innerWidth, window.innerHeight, {minFilter:THREE.LinearFilter, magFilter:THREE.NearestFilter, format:THREE.RGBAFormat}) ;
+  var m_RTT = new THREE.WebGLRenderTarget( 100, 100, {minFilter:THREE.LinearFilter, magFilter:THREE.NearestFilter, format:THREE.RGBAFormat}) ;
 
 
 
@@ -160,9 +165,19 @@ E_Volume.prototype.Initialize = function()
 
   //Initialize LUT
   var lut = this.GetLUT();
-  var range = this.GetVolumeData().minMax;
+
+  //Set Volume Data Window Level
+  var volumeData = this.GetVolumeData();
+  var range = volumeData.minMax;
+  volumeData.windowWidth = range[1] - range[0] - 1;
+  volumeData.windowCenter = (range[1] + range[0] - 1) / 2;
+
+
+
+
   var width = range[1] - range[0];
 
+  //SET OTP and CTP
   var CTPbone = [
     [0, 0, 0, 0],
     [.2, .73, .25, .30],
@@ -206,7 +221,7 @@ E_Volume.prototype.GetCenter = function(){
 
 E_Volume.prototype.SetCustomShader = function()
 {
-  //var offset = new THREE.Vector3(-0.5, -0.5, -0.5);
+  var offset = new THREE.Vector3(-3.0, -3.0, -3.0);
   var data = this.GetVolumeData();
 
   var boxGeometry = new THREE.BoxGeometry(
@@ -216,9 +231,9 @@ E_Volume.prototype.SetCustomShader = function()
   );
 
   boxGeometry.applyMatrix(new THREE.Matrix4().makeTranslation(
-    data.halfDimensionsIJK.x - 0.5,
-    data.halfDimensionsIJK.y - 0.5,
-    data.halfDimensionsIJK.z - 0.5
+    data.halfDimensionsIJK.x + offset.x,
+    data.halfDimensionsIJK.y + offset.y,
+    data.halfDimensionsIJK.z + offset.z
   ));
 
   var uniformFirstPass = this.firstPassUniforms();
@@ -256,6 +271,8 @@ E_Volume.prototype.SetCustomShader = function()
     textures.push(tex);
   }
 
+  console.log(data.bitsAllocated);
+
   var uniformSecondPass = this.SecondPassUniforms();
   uniformSecondPass.uTextureSize.value = data.textureSize;
   uniformSecondPass.uTextureContainer.value = textures;
@@ -287,7 +304,6 @@ E_Volume.prototype.SetCustomShader = function()
   // this.material.needsUpdate = true;
   // this.material = materialSecondPass;
   this.actor = new THREE.Mesh(boxGeometry, materialSecondPass);
-
   this.actor.applyMatrix(data._ijk2LPS);
 }
 
@@ -295,13 +311,14 @@ E_Volume.prototype.UpdateLUT = function()
 {
   var lut = this.GetLUT();
   lut.paintCanvas();
-
   this.actor.material.uniforms.uTextureLUT.value = lut.texture;
 }
 
 E_Volume.prototype.AddToRenderer = function(renderer)
 {
   renderer.scene.add(this.actor);
+  var slice = this.GetSliceImage();
+  renderer.scene.add(slice[0]);
 }
 
 E_Volume.prototype.firstPassUniforms = function()
@@ -394,7 +411,162 @@ E_Volume.prototype.SecondPassUniforms = function()
 
 module.exports = E_Volume;
 
-},{"ami.js":12,"glslify":113}],3:[function(require,module,exports){
+},{"ami.js":13,"glslify":114}],3:[function(require,module,exports){
+var AMI = require("ami.js");
+var E_SliceImage = AMI.default.Helpers.Stack;
+var E_Lut = AMI.default.Helpers.Lut;
+var E_VolumeActor = AMI.default.Helpers.VolumeRendering;
+
+function E_VolumeS(stack)
+{
+  this.SLICE_3D = 0;
+  this.SLICE_AXL = 1;
+  this.SLICE_COR = 2;
+  this.SLICE_SAG = 3;
+
+  //this.actor = null;
+
+  //Prepare Volume Data
+  var m_volumeData = stack;
+  if(!m_volumeData.prepared){
+    m_volumeData.prepare();
+    m_volumeData.pack();
+  }
+
+  this.actor = null;
+
+  //Init Slice Image
+  var m_sliceImages = [];
+  for(var i=0 ; i<4 ; i++){
+    m_sliceImages[i] = new E_SliceImage(stack);
+  }
+
+  var m_lut = new E_Lut("ID_VIEW_LUT", "default", "linear");
+
+
+  this.GetVolumeData = function(){
+    return m_volumeData;
+  }
+
+  this.GetLUT = function()
+  {
+    return m_lut;
+  }
+
+  this.GetSliceImage = function(idx)
+  {
+    if(idx == null) return m_sliceImages;
+    return m_sliceImages[idx];
+  }
+
+  this.GetSceneRTT= function(){
+    return m_sceneRTT;
+  }
+
+  this.GetRTT = function(){
+    return m_RTT;
+  }
+
+  this.Initialize();
+  this.UpdateLUT();
+}
+
+
+E_VolumeS.prototype.Initialize = function()
+{
+  //Initialize Slice Image
+  var sliceImages = this.GetSliceImage();
+
+  //Main View Slice Image
+  sliceImages[0].bbox.visible = false;
+  sliceImages[0].border.color = 0xF44336;
+
+  //AXL View Slice Image
+  sliceImages[1].bbox.visible = false;
+  sliceImages[1].border.color = 0xF40000;
+
+  sliceImages[2].bbox.visible = false;
+  sliceImages[2].border.color = 0x00F400;
+
+  sliceImages[3].bbox.visible = false;
+  sliceImages[3].border.color = 0x0000F4;
+
+
+  //Set Volume Data Window Level
+  var volumeData = this.GetVolumeData();
+  var range = volumeData.minMax;
+  volumeData.windowWidth = range[1] - range[0] - 1;
+  volumeData.windowCenter = (range[1] + range[0] - 1) / 2;
+
+
+  //SET OTP and CTP
+  var CTPbone = [
+    [0, 0, 0, 0],
+    [.3, .73, .25, .30],
+    [.5, .73, .25, .30],
+    [.6, .9, .82, .56],
+    [1, 1, 1, 1]
+  ];
+
+  var OTPbone = [
+    [0, 0],
+    [1, 1]
+  ]
+
+
+  var lut = this.GetLUT();
+  lut._color = CTPbone;
+  lut._opacity = OTPbone;
+
+  //Add actor && Initialize Informations
+  this.actor = new E_VolumeActor( volumeData );
+  this.actor.uniforms.uLut.value = 1
+  this.actor.uniforms.uWindowCenterWidth.value = [volumeData.windowCenter, volumeData.windowWidth];
+}
+
+E_VolumeS.prototype.UpdateLUT = function()
+{
+  var lut = this.GetLUT();
+  lut.paintCanvas();
+  this.actor.uniforms.uTextureLUT.value = lut.texture;
+
+}
+
+E_VolumeS.prototype.MoveSliceImage = function( value )
+{
+  var sliceImages = this.GetSliceImage();
+  if(value > 0){
+    if(this.GetSliceImage(0).index >= this.GetVolumeData().dimensionsIJK.z -1 ) return;
+
+    for(var i in sliceImages){
+      sliceImages[i].index++;
+    }
+  }else{
+    if(this.GetSliceImage(0).index <= 0) return;
+    for(var i in sliceImages){
+      sliceImages[i].index--;
+    }
+  }
+}
+
+E_VolumeS.prototype.AddToRenderer = function(renderer)
+{
+  var center = this.GetVolumeData().worldCenter();
+  renderer.scene.add(this.actor);
+
+  renderer.camera.lookAt(center.x, center.y, center.z)
+  renderer.camera.updateProjectionMatrix();
+  renderer.control.target.set(center.x, center.y, center.z);
+
+
+
+  var slice = this.GetSliceImage(0);
+  renderer.scene.add(slice);
+}
+
+module.exports = E_VolumeS;
+
+},{"ami.js":13}],4:[function(require,module,exports){
 function E_Interactor(Mgr, renderer)
 {
   this.Mgr = Mgr;
@@ -446,7 +618,7 @@ E_Interactor.prototype.OnMouseWheel = function()
 
 module.exports = E_Interactor;
 
-},{}],4:[function(require,module,exports){
+},{}],5:[function(require,module,exports){
 var TrackballControls = require('three-trackballcontrols');
 var E_MeshManager = require("./E_MeshManager.js");
 var E_VolumeManager = require("./E_VolumeManager.js");
@@ -607,15 +779,15 @@ E_Manager.prototype.Render = function()
   //Render
   for(var i in renderer){
 
-      if(i == this.VIEW_MAIN && this.VolumeMgr().m_selectedVolumeIdx != -1){
-        //Volume Rendering
-        var volume = this.VolumeMgr().GetSelectedVolume();
-
-        var sceneRTT = volume.GetSceneRTT();
-        var RTT = volume.GetRTT();
-
-        renderer[i].render(sceneRTT, renderer[i].camera, RTT, true);
-      }
+      // if(i == this.VIEW_MAIN && this.VolumeMgr().m_selectedVolumeIdx != -1){
+      //   //Volume Rendering
+      //   var volume = this.VolumeMgr().GetSelectedVolume();
+      //
+      //   var sceneRTT = volume.GetSceneRTT();
+      //   var RTT = volume.GetRTT();
+      //
+      //   renderer[i].render(sceneRTT, renderer[i].camera, RTT, true);
+      // }
 
 
       renderer[i].render(renderer[i].scene, renderer[i].camera);
@@ -699,7 +871,7 @@ E_Manager.prototype.UploadScene = function()
 
 module.exports = E_Manager;
 
-},{"./E_Interactor.js":3,"./E_MeshManager.js":5,"./E_SocketManager.js":6,"./E_VolumeManager.js":7,"three-trackballcontrols":152}],5:[function(require,module,exports){
+},{"./E_Interactor.js":4,"./E_MeshManager.js":6,"./E_SocketManager.js":7,"./E_VolumeManager.js":8,"three-trackballcontrols":153}],6:[function(require,module,exports){
 var STLLoader = require('three-stl-loader')(THREE);
 
 function E_MeshManager(Mgr)
@@ -834,7 +1006,7 @@ E_MeshManager.prototype.GetCenter = function(mesh)
 
 module.exports = E_MeshManager;
 
-},{"three-stl-loader":151}],6:[function(require,module,exports){
+},{"three-stl-loader":152}],7:[function(require,module,exports){
 function E_SocketManager(Mgr)
 {
   this.Mgr = Mgr;
@@ -929,10 +1101,11 @@ E_SocketManager.prototype.HandleChat = function(data){
 
 module.exports = E_SocketManager;
 
-},{}],7:[function(require,module,exports){
+},{}],8:[function(require,module,exports){
 var AMI = require("ami.js");
 var E_DicomLoader = AMI.default.Loaders.Volume;
 var E_Volume = require("../Data/E_Volume.js");
+var E_VolumeS = require("../Data/E_VolumeS.js");
 var E_Histogram = require("../Data/E_Histogram.js");
 
 
@@ -943,6 +1116,7 @@ function E_VolumeManager(Mgr)
   this.Mgr = Mgr;
 
   this.m_selectedVolumeIdx = -1;
+  this.m_selectedOpacityIndex = -1;
   this.m_volumeList = [];
 
   var m_histogram = new E_Histogram();
@@ -988,7 +1162,7 @@ E_VolumeManager.prototype.ImportVolume = function(buffer)
     var series = seriesContainer[0].mergeSeries(seriesContainer);
     var data = series[0].stack[0];
 
-    var volume = new E_Volume(data);
+    var volume = new E_VolumeS(data);
     return volume
   })
   .then(function(volume){
@@ -996,7 +1170,7 @@ E_VolumeManager.prototype.ImportVolume = function(buffer)
     that.Mgr.Redraw();
   })
   .catch(function(error){
-    console.log("Volme Add Error: " + error);
+    window.console.log("Volme Add Error: " + error);
   })
 }
 
@@ -1004,6 +1178,7 @@ E_VolumeManager.prototype.AddVolume = function(volume)
 {
   var renderer = this.Mgr.GetRenderer(this.Mgr.VIEW_MAIN);
   volume.AddToRenderer(renderer)
+  //renderer.scene.add(volume);
 
   this.m_volumeList.push(volume);
   this.SetSelectedVolume(this.m_volumeList.length -1);
@@ -1027,9 +1202,98 @@ E_VolumeManager.prototype.UpdateHistogram = function()
   this.GetHistogram().Update(lut)
 }
 
+E_VolumeManager.prototype.OnClickedOpacity = function(x, y)
+{
+  if(this.m_selectedVolumeIdx == -1) return;
+
+  var canvas = document.getElementById("ID_VIEW_LUT");
+
+  x = x/canvas.width;
+  y = 1.0 - y/canvas.height;
+
+  var otf = this.GetSelectedVolume().GetLUT()._opacity;
+
+  for(var i=0 ; i<otf.length ; i++){
+    if(Math.abs(otf[i][0]-x) < 0.1 && Math.abs(otf[i][1]-y) < 0.1){
+      this.m_selectedOpacityIndex = i;
+    }
+  }
+
+  if(this.m_selectedOpacityIndex == -1){
+    this.GenerateOpacityPoint(x, y);
+  }
+}
+
+E_VolumeManager.prototype.GenerateOpacityPoint = function(x,y)
+{
+  var otf = this.GetSelectedVolume().GetLUT()._opacity;
+
+  for(var i=0 ; i<otf.length ; i++){
+    if(x > otf[i][0] && x < otf[i+1][0]){
+      otf.splice(i+1, 0, [x, y]);
+      this.m_selectedOpacityIndex = i+1;
+      break;
+    }
+  }
+
+  this.GetSelectedVolume().UpdateLUT();
+  this.UpdateHistogram();
+  this.Mgr.Redraw();
+}
+
+E_VolumeManager.prototype.OnMoveOpacity = function(x, y)
+{
+  if(this.m_selectedVolumeIdx == -1) return;
+  if(this.m_selectedOpacityIndex == -1) return;
+
+  var canvas = document.getElementById("ID_VIEW_LUT");
+  var volume = this.GetSelectedVolume();
+  var otf = volume.GetLUT()._opacity;
+
+  x = x/canvas.width;
+  y = 1.0 - y/canvas.height;
+
+  if(x < 0) x = 0;
+  if(y < 0) y = 0;
+  if(x > 1) x = 1;
+  if(y > 1) y = 1;
+
+  if(this.m_selectedOpacityIndex > 0){
+    if(x < otf[this.m_selectedOpacityIndex-1][0]){
+      x = otf[this.m_selectedOpacityIndex-1][0];
+    }
+  }else{
+    x = 0;
+  }
+
+  if(this.m_selectedOpacityIndex < otf.length -1){
+    if(x > otf[this.m_selectedOpacityIndex+1][0]){
+      x = otf[this.m_selectedOpacityIndex+1][0];
+    }
+  }else{
+    x = 1;
+  }
+
+
+  //Set otf
+  otf[this.m_selectedOpacityIndex] = [x, y];
+
+  //Update Volumevolume
+  volume.UpdateLUT();
+
+  this.UpdateHistogram();
+  this.Mgr.Redraw();
+}
+
+
+E_VolumeManager.prototype.OnReleaseOpacity = function()
+{
+  this.m_selectedOpacityIndex = -1;
+}
+
 module.exports = E_VolumeManager;
 
-},{"../Data/E_Histogram.js":1,"../Data/E_Volume.js":2,"ami.js":12}],8:[function(require,module,exports){
+},{"../Data/E_Histogram.js":1,"../Data/E_Volume.js":2,"../Data/E_VolumeS.js":3,"ami.js":13}],9:[function(require,module,exports){
 //Define Header
 var E_Manager = require("./E_Manager.js");
 
@@ -1148,7 +1412,25 @@ $$("ID_CHAT_INPUT").attachEvent("onKeyPress", function(code, e){
   }
 });
 
-},{"./E_Manager.js":4}],9:[function(require,module,exports){
+
+
+
+//Histogram
+
+//$$("ID_VIEW_VOLUME_LUT")
+$("#ID_VIEW_LUT").mousedown(function(e){
+  Manager.VolumeMgr().OnClickedOpacity(e.offsetX, e.offsetY);
+});
+
+$(document).mousemove(function(e){
+  Manager.VolumeMgr().OnMoveOpacity(e.offsetX, e.offsetY);
+});
+
+$(document).mouseup(function(e){
+  Manager.VolumeMgr().OnReleaseOpacity();
+});
+
+},{"./E_Manager.js":5}],10:[function(require,module,exports){
 // jshint ignore: start
 
 /* -*- Mode: Java; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- /
@@ -2168,7 +2450,7 @@ var moduleType = typeof module;
 if ((moduleType !== 'undefined') && module.exports) {
     module.exports = JpegImage;
 }
-},{}],10:[function(require,module,exports){
+},{}],11:[function(require,module,exports){
 /*! image-JPEG2000 - v0.3.1 - 2015-08-26 | https://github.com/OHIF/image-JPEG2000 */
 /* -*- Mode: Java; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 /* vim: set shiftwidth=2 tabstop=2 autoindent cindent expandtab: */
@@ -6223,7 +6505,7 @@ function loadJpegStream(id, imageUrl, objs) {
   });
   img.src = imageUrl;
 }
-},{}],11:[function(require,module,exports){
+},{}],12:[function(require,module,exports){
 module.exports={
   "_args": [
     [
@@ -6388,7 +6670,7 @@ module.exports={
   ]
 }
 
-},{}],12:[function(require,module,exports){
+},{}],13:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -6455,7 +6737,7 @@ exports.default = {
 
 window.console.log('AMI ' + pckg.version + ' ( ThreeJS ' + pckg.config.threeVersion + ')');
 
-},{"../package.json":11,"./cameras/cameras":13,"./controls/controls":15,"./core/core":19,"./geometries/geometries":23,"./helpers/helpers":28,"./loaders/loaders":37,"./models/models":41,"./parsers/parsers":46,"./shaders/shaders":60,"./widgets/widgets":69}],13:[function(require,module,exports){
+},{"../package.json":12,"./cameras/cameras":14,"./controls/controls":16,"./core/core":20,"./geometries/geometries":24,"./helpers/helpers":29,"./loaders/loaders":38,"./models/models":42,"./parsers/parsers":47,"./shaders/shaders":61,"./widgets/widgets":70}],14:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -6475,7 +6757,7 @@ exports.default = {
   Orthographic: _cameras2.default
 };
 
-},{"./cameras.orthographic":14}],14:[function(require,module,exports){
+},{"./cameras.orthographic":15}],15:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -6869,7 +7151,7 @@ var CamerasOrthographic = function (_THREE$OrthographicCa) {
 
 exports.default = CamerasOrthographic;
 
-},{"../core/core.intersections":18,"../core/core.validators":22}],15:[function(require,module,exports){
+},{"../core/core.intersections":19,"../core/core.validators":23}],16:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -6891,7 +7173,7 @@ exports.default = {
   TrackballOrtho: _controls4.default
 };
 
-},{"./controls.trackball":16,"./controls.trackballortho":17}],16:[function(require,module,exports){
+},{"./controls.trackball":17,"./controls.trackballortho":18}],17:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -7631,7 +7913,7 @@ var Trackball = function (_THREE$EventDispatche) {
 
 exports.default = Trackball;
 
-},{}],17:[function(require,module,exports){
+},{}],18:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -8150,7 +8432,7 @@ var Trackballortho = function (_THREE$EventDispatche) {
 
 exports.default = Trackballortho;
 
-},{}],18:[function(require,module,exports){
+},{}],19:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -8601,7 +8883,7 @@ var Intersections = function () {
 
 exports.default = Intersections;
 
-},{"./core.utils":21,"./core.validators":22}],19:[function(require,module,exports){
+},{"./core.utils":22,"./core.validators":23}],20:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -8639,7 +8921,7 @@ exports.default = {
   //  Pack
 };
 
-},{"./core.intersections":18,"./core.pack":20,"./core.utils":21,"./core.validators":22}],20:[function(require,module,exports){
+},{"./core.intersections":19,"./core.pack":21,"./core.utils":22,"./core.validators":23}],21:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -8659,7 +8941,7 @@ var Pack = function Pack() {
 
 exports.default = Pack;
 
-},{}],21:[function(require,module,exports){
+},{}],22:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -8768,7 +9050,7 @@ var Utils = function () {
 
 exports.default = Utils;
 
-},{"./core.validators":22}],22:[function(require,module,exports){
+},{"./core.validators":23}],23:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -8889,7 +9171,7 @@ var Validators = function () {
 
 exports.default = Validators;
 
-},{}],23:[function(require,module,exports){
+},{}],24:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -8915,7 +9197,7 @@ exports.default = {
   Voxel: _geometries4.default
 };
 
-},{"./geometries.slice":24,"./geometries.voxel":25}],24:[function(require,module,exports){
+},{"./geometries.slice":25,"./geometries.voxel":26}],25:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -9130,7 +9412,7 @@ var GeometriesSlice = function (_THREE$ShapeGeometry) {
 
 exports.default = GeometriesSlice;
 
-},{"../../src/core/core.intersections":18}],25:[function(require,module,exports){
+},{"../../src/core/core.intersections":19}],26:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -9207,7 +9489,7 @@ var GeometriesVoxel = function (_THREE$BoxGeometry) {
 
 exports.default = GeometriesVoxel;
 
-},{}],26:[function(require,module,exports){
+},{}],27:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -9329,7 +9611,7 @@ var HelpersBorder = function (_THREE$Object3D) {
 
 exports.default = HelpersBorder;
 
-},{}],27:[function(require,module,exports){
+},{}],28:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -9449,7 +9731,7 @@ var HelpersBoundingBox = function (_THREE$Object3D) {
 
 exports.default = HelpersBoundingBox;
 
-},{}],28:[function(require,module,exports){
+},{}],29:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -9505,7 +9787,7 @@ exports.default = {
   Voxel: _helpers16.default
 };
 
-},{"./helpers.border":26,"./helpers.boundingbox":27,"./helpers.lut":29,"./helpers.progressbar":31,"./helpers.slice":32,"./helpers.stack":33,"./helpers.volumerendering":34,"./helpers.voxel":35}],29:[function(require,module,exports){
+},{"./helpers.border":27,"./helpers.boundingbox":28,"./helpers.lut":30,"./helpers.progressbar":32,"./helpers.slice":33,"./helpers.stack":34,"./helpers.volumerendering":35,"./helpers.voxel":36}],30:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -9708,7 +9990,7 @@ var HelpersLut = function () {
 
 exports.default = HelpersLut;
 
-},{}],30:[function(require,module,exports){
+},{}],31:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -9791,7 +10073,7 @@ var HerlpersMaterialMixin = function HerlpersMaterialMixin(superclass) {
 
 exports.default = HerlpersMaterialMixin;
 
-},{}],31:[function(require,module,exports){
+},{}],32:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -9948,7 +10230,7 @@ var HelpersProgressBar = function () {
 
 exports.default = HelpersProgressBar;
 
-},{}],32:[function(require,module,exports){
+},{}],33:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -10367,7 +10649,7 @@ var HelpersSlice = function (_HelpersMaterialMixin) {
 
 exports.default = HelpersSlice;
 
-},{"../../src/geometries/geometries.slice":24,"../../src/helpers/helpers.material.mixin":30,"../../src/shaders/shaders.data.fragment":57,"../../src/shaders/shaders.data.uniform":58,"../../src/shaders/shaders.data.vertex":59}],33:[function(require,module,exports){
+},{"../../src/geometries/geometries.slice":25,"../../src/helpers/helpers.material.mixin":31,"../../src/shaders/shaders.data.fragment":58,"../../src/shaders/shaders.data.uniform":59,"../../src/shaders/shaders.data.vertex":60}],34:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -10833,7 +11115,7 @@ var HelpersStack = function (_THREE$Object3D) {
 
 exports.default = HelpersStack;
 
-},{"../../src/helpers/helpers.border":26,"../../src/helpers/helpers.boundingbox":27,"../../src/helpers/helpers.slice":32}],34:[function(require,module,exports){
+},{"../../src/helpers/helpers.border":27,"../../src/helpers/helpers.boundingbox":28,"../../src/helpers/helpers.slice":33}],35:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -10983,7 +11265,7 @@ var HelpersVolumeRendering = function (_HelpersMaterialMixin) {
 
 exports.default = HelpersVolumeRendering;
 
-},{"../../src/helpers/helpers.material.mixin":30,"../../src/shaders/shaders.vr.fragment":64,"../../src/shaders/shaders.vr.uniform":65,"../../src/shaders/shaders.vr.vertex":66}],35:[function(require,module,exports){
+},{"../../src/helpers/helpers.material.mixin":31,"../../src/shaders/shaders.vr.fragment":65,"../../src/shaders/shaders.vr.uniform":66,"../../src/shaders/shaders.vr.vertex":67}],36:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -11359,7 +11641,7 @@ var HelpersVoxel = function (_THREE$Object3D) {
 
 exports.default = HelpersVoxel;
 
-},{"../../src/geometries/geometries.voxel":25,"../../src/models/models.stack":43,"../../src/models/models.voxel":44}],36:[function(require,module,exports){
+},{"../../src/geometries/geometries.voxel":26,"../../src/models/models.stack":44,"../../src/models/models.voxel":45}],37:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -11503,7 +11785,7 @@ var LoadersBase = function () {
 
 exports.default = LoadersBase;
 
-},{"../../src/helpers/helpers.progressbar":31,"../../src/models/models.frame":40,"../../src/models/models.series":42,"../../src/models/models.stack":43}],37:[function(require,module,exports){
+},{"../../src/helpers/helpers.progressbar":32,"../../src/models/models.frame":41,"../../src/models/models.series":43,"../../src/models/models.stack":44}],38:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -11524,7 +11806,7 @@ exports.default = {
   Volume: _loaders2.default
 };
 
-},{"./loaders.volume":38}],38:[function(require,module,exports){
+},{"./loaders.volume":39}],39:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -11767,7 +12049,7 @@ var LoadersVolumes = function (_LoadersBase) {
 
 exports.default = LoadersVolumes;
 
-},{"../../src/models/models.frame":40,"../../src/models/models.series":42,"../../src/models/models.stack":43,"../../src/parsers/parsers.dicom":45,"../../src/parsers/parsers.nifti":47,"../../src/parsers/parsers.nrrd":48,"./loaders.base":36,"pako":135}],39:[function(require,module,exports){
+},{"../../src/models/models.frame":41,"../../src/models/models.series":43,"../../src/models/models.stack":44,"../../src/parsers/parsers.dicom":46,"../../src/parsers/parsers.nifti":48,"../../src/parsers/parsers.nrrd":49,"./loaders.base":37,"pako":136}],40:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -11893,7 +12175,7 @@ var ModelsBase = function () {
 
 exports.default = ModelsBase;
 
-},{}],40:[function(require,module,exports){
+},{}],41:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -12267,7 +12549,7 @@ var ModelsFrame = function (_ModelsBase) {
 
 exports.default = ModelsFrame;
 
-},{"../../src/models/models.base":39}],41:[function(require,module,exports){
+},{"../../src/models/models.base":40}],42:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -12303,7 +12585,7 @@ exports.default = {
   Voxel: _models8.default
 };
 
-},{"./models.frame":40,"./models.series":42,"./models.stack":43,"./models.voxel":44}],42:[function(require,module,exports){
+},{"./models.frame":41,"./models.series":43,"./models.stack":44,"./models.voxel":45}],43:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -12501,7 +12783,7 @@ var ModelsSeries = function (_ModelsBase) {
 
 exports.default = ModelsSeries;
 
-},{"../../src/models/models.base":39}],43:[function(require,module,exports){
+},{"../../src/models/models.base":40}],44:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -13397,7 +13679,7 @@ var ModelsStack = function (_ModelsBase) {
 
 exports.default = ModelsStack;
 
-},{"../../src/core/core.pack":20,"../../src/core/core.utils":21,"../../src/models/models.base":39,"math-float32-to-binary-string":127}],44:[function(require,module,exports){
+},{"../../src/core/core.pack":21,"../../src/core/core.utils":22,"../../src/models/models.base":40,"math-float32-to-binary-string":128}],45:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -13470,7 +13752,7 @@ var ModelsVoxel = function () {
 
 exports.default = ModelsVoxel;
 
-},{}],45:[function(require,module,exports){
+},{}],46:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -14507,7 +14789,7 @@ var ParsersDicom = function (_ParsersVolume) {
 
 exports.default = ParsersDicom;
 
-},{"../../external/scripts/jpeg":9,"../../external/scripts/jpx":10,"./parsers.volume":49,"dicom-parser":112,"jpeg-lossless-decoder-js":119}],46:[function(require,module,exports){
+},{"../../external/scripts/jpeg":10,"../../external/scripts/jpx":11,"./parsers.volume":50,"dicom-parser":113,"jpeg-lossless-decoder-js":120}],47:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -14538,7 +14820,7 @@ exports.default = {
   Nrrd: _parsers6.default
 };
 
-},{"./parsers.dicom":45,"./parsers.nifti":47,"./parsers.nrrd":48}],47:[function(require,module,exports){
+},{"./parsers.dicom":46,"./parsers.nifti":48,"./parsers.nrrd":49}],48:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -14978,7 +15260,7 @@ var ParsersNifti = function (_ParsersVolume) {
 
 exports.default = ParsersNifti;
 
-},{"./parsers.volume":49,"nifti-reader-js":130}],48:[function(require,module,exports){
+},{"./parsers.volume":50,"nifti-reader-js":131}],49:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -15272,7 +15554,7 @@ var ParsersNifti = function (_ParsersVolume) {
 
 exports.default = ParsersNifti;
 
-},{"./parsers.volume":49,"nrrd-js":134,"pako":135}],49:[function(require,module,exports){
+},{"./parsers.volume":50,"nrrd-js":135,"pako":136}],50:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -15346,7 +15628,7 @@ var ParsersVolume = function () {
 
 exports.default = ParsersVolume;
 
-},{}],50:[function(require,module,exports){
+},{}],51:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -15425,7 +15707,7 @@ var IntersectBox = function (_ShadersBase) {
 
 exports.default = new IntersectBox();
 
-},{"../shaders.base":56}],51:[function(require,module,exports){
+},{"../shaders.base":57}],52:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -15497,7 +15779,7 @@ var Texture3d = function (_ShadersBase) {
 
 exports.default = new Texture3d();
 
-},{"../shaders.base":56}],52:[function(require,module,exports){
+},{"../shaders.base":57}],53:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -15672,7 +15954,7 @@ var Unpack = function (_ShadersBase) {
 
 exports.default = new Unpack();
 
-},{"../shaders.base":56}],53:[function(require,module,exports){
+},{"../shaders.base":57}],54:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -15750,7 +16032,7 @@ var InterpolationIdentity = function (_ShadersBase) {
 
 exports.default = new InterpolationIdentity();
 
-},{"../helpers/shaders.helpers.texture3d":51,"../helpers/shaders.helpers.unpack":52,"../shaders.base":56}],54:[function(require,module,exports){
+},{"../helpers/shaders.helpers.texture3d":52,"../helpers/shaders.helpers.unpack":53,"../shaders.base":57}],55:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -15787,7 +16069,7 @@ function shadersInterpolation(baseFragment, currentVoxel, dataValue, gradient) {
 
 exports.default = shadersInterpolation;
 
-},{"./shaders.interpolation.identity":53,"./shaders.interpolation.trilinear":55}],55:[function(require,module,exports){
+},{"./shaders.interpolation.identity":54,"./shaders.interpolation.trilinear":56}],56:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -15863,7 +16145,7 @@ var InterpolationTrilinear = function (_ShadersBase) {
 
 exports.default = new InterpolationTrilinear();
 
-},{"../shaders.base":56,"./shaders.interpolation.identity":53}],56:[function(require,module,exports){
+},{"../shaders.base":57,"./shaders.interpolation.identity":54}],57:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -15903,7 +16185,7 @@ var ShadersBase = function () {
 
 exports.default = ShadersBase;
 
-},{}],57:[function(require,module,exports){
+},{}],58:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -15992,7 +16274,7 @@ var ShadersFragment = function () {
 
 exports.default = ShadersFragment;
 
-},{"./interpolation/shaders.interpolation":54}],58:[function(require,module,exports){
+},{"./interpolation/shaders.interpolation":55}],59:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -16097,7 +16379,7 @@ var ShadersUniform = function () {
 
 exports.default = ShadersUniform;
 
-},{}],59:[function(require,module,exports){
+},{}],60:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -16125,7 +16407,7 @@ var ShadersVertex = function () {
 
 exports.default = ShadersVertex;
 
-},{}],60:[function(require,module,exports){
+},{}],61:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -16190,7 +16472,7 @@ exports.default = {
 
 };
 
-},{"./shaders.data.fragment":57,"./shaders.data.uniform":58,"./shaders.data.vertex":59,"./shaders.layer.fragment":61,"./shaders.layer.uniform":62,"./shaders.layer.vertex":63,"./shaders.vr.fragment":64,"./shaders.vr.uniform":65,"./shaders.vr.vertex":66}],61:[function(require,module,exports){
+},{"./shaders.data.fragment":58,"./shaders.data.uniform":59,"./shaders.data.vertex":60,"./shaders.layer.fragment":62,"./shaders.layer.uniform":63,"./shaders.layer.vertex":64,"./shaders.vr.fragment":65,"./shaders.vr.uniform":66,"./shaders.vr.vertex":67}],62:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -16273,7 +16555,7 @@ var ShadersFragment = function () {
 
 exports.default = ShadersFragment;
 
-},{}],62:[function(require,module,exports){
+},{}],63:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -16345,7 +16627,7 @@ var ShadersUniform = function () {
 
 exports.default = ShadersUniform;
 
-},{}],63:[function(require,module,exports){
+},{}],64:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -16373,7 +16655,7 @@ var ShadersVertex = function () {
 
 exports.default = ShadersVertex;
 
-},{}],64:[function(require,module,exports){
+},{}],65:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -16466,7 +16748,7 @@ var ShadersFragment = function () {
 
 exports.default = ShadersFragment;
 
-},{"./helpers/shaders.helpers.intersectBox":50,"./interpolation/shaders.interpolation":54}],65:[function(require,module,exports){
+},{"./helpers/shaders.helpers.intersectBox":51,"./interpolation/shaders.interpolation":55}],66:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -16597,7 +16879,7 @@ var ShadersUniform = function () {
 
 exports.default = ShadersUniform;
 
-},{}],66:[function(require,module,exports){
+},{}],67:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -16625,7 +16907,7 @@ var ShadersVertex = function () {
 
 exports.default = ShadersVertex;
 
-},{}],67:[function(require,module,exports){
+},{}],68:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -16786,7 +17068,7 @@ var WidgetsBase = function (_THREE$Object3D) {
 
 exports.default = WidgetsBase;
 
-},{}],68:[function(require,module,exports){
+},{}],69:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -17279,7 +17561,7 @@ var WidgetsHandle = function (_WidgetsBase) {
 
 exports.default = WidgetsHandle;
 
-},{"../../src/core/core.intersections":18,"../../src/widgets/widgets.base":67}],69:[function(require,module,exports){
+},{"../../src/core/core.intersections":19,"../../src/widgets/widgets.base":68}],70:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -17310,7 +17592,7 @@ exports.default = {
   Ruler: _widgets6.default
 };
 
-},{"./widgets.handle":68,"./widgets.ruler":70,"./widgets.voxelProbe":71}],70:[function(require,module,exports){
+},{"./widgets.handle":69,"./widgets.ruler":71,"./widgets.voxelProbe":72}],71:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -17606,7 +17888,7 @@ var WidgetsRuler = function (_WidgetsBase) {
 
 exports.default = WidgetsRuler;
 
-},{"../../src/widgets/widgets.base":67,"../../src/widgets/widgets.handle":68}],71:[function(require,module,exports){
+},{"../../src/widgets/widgets.base":68,"../../src/widgets/widgets.handle":69}],72:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -18052,7 +18334,7 @@ var WidgetsVoxelProbe = function (_THREE$Object3D) {
 
 exports.default = WidgetsVoxelProbe;
 
-},{"../../src/helpers/helpers.voxel":35}],72:[function(require,module,exports){
+},{"../../src/helpers/helpers.voxel":36}],73:[function(require,module,exports){
 // http://wiki.commonjs.org/wiki/Unit_Testing/1.0
 //
 // THIS IS NOT TESTED NOR LIKELY TO WORK OUTSIDE V8!
@@ -18413,9 +18695,9 @@ var objectKeys = Object.keys || function (obj) {
   return keys;
 };
 
-},{"util/":109}],73:[function(require,module,exports){
+},{"util/":110}],74:[function(require,module,exports){
 
-},{}],74:[function(require,module,exports){
+},{}],75:[function(require,module,exports){
 'use strict';
 
 
@@ -18519,7 +18801,7 @@ exports.setTyped = function (on) {
 
 exports.setTyped(TYPED_OK);
 
-},{}],75:[function(require,module,exports){
+},{}],76:[function(require,module,exports){
 'use strict';
 
 // Note: adler32 takes 12% for level 0 and 2% for level 6.
@@ -18553,7 +18835,7 @@ function adler32(adler, buf, len, pos) {
 
 module.exports = adler32;
 
-},{}],76:[function(require,module,exports){
+},{}],77:[function(require,module,exports){
 'use strict';
 
 
@@ -18605,7 +18887,7 @@ module.exports = {
   //Z_NULL:                 null // Use -1 or null inline, depending on var type
 };
 
-},{}],77:[function(require,module,exports){
+},{}],78:[function(require,module,exports){
 'use strict';
 
 // Note: we can't get significant speed boost here.
@@ -18648,7 +18930,7 @@ function crc32(crc, buf, len, pos) {
 
 module.exports = crc32;
 
-},{}],78:[function(require,module,exports){
+},{}],79:[function(require,module,exports){
 'use strict';
 
 var utils   = require('../utils/common');
@@ -20505,7 +20787,7 @@ exports.deflatePrime = deflatePrime;
 exports.deflateTune = deflateTune;
 */
 
-},{"../utils/common":74,"./adler32":75,"./crc32":77,"./messages":82,"./trees":83}],79:[function(require,module,exports){
+},{"../utils/common":75,"./adler32":76,"./crc32":78,"./messages":83,"./trees":84}],80:[function(require,module,exports){
 'use strict';
 
 // See state defs from inflate.js
@@ -20833,7 +21115,7 @@ module.exports = function inflate_fast(strm, start) {
   return;
 };
 
-},{}],80:[function(require,module,exports){
+},{}],81:[function(require,module,exports){
 'use strict';
 
 
@@ -22373,7 +22655,7 @@ exports.inflateSyncPoint = inflateSyncPoint;
 exports.inflateUndermine = inflateUndermine;
 */
 
-},{"../utils/common":74,"./adler32":75,"./crc32":77,"./inffast":79,"./inftrees":81}],81:[function(require,module,exports){
+},{"../utils/common":75,"./adler32":76,"./crc32":78,"./inffast":80,"./inftrees":82}],82:[function(require,module,exports){
 'use strict';
 
 
@@ -22702,7 +22984,7 @@ module.exports = function inflate_table(type, lens, lens_index, codes, table, ta
   return 0;
 };
 
-},{"../utils/common":74}],82:[function(require,module,exports){
+},{"../utils/common":75}],83:[function(require,module,exports){
 'use strict';
 
 module.exports = {
@@ -22717,7 +22999,7 @@ module.exports = {
   '-6':   'incompatible version' /* Z_VERSION_ERROR (-6) */
 };
 
-},{}],83:[function(require,module,exports){
+},{}],84:[function(require,module,exports){
 'use strict';
 
 
@@ -23921,7 +24203,7 @@ exports._tr_flush_block  = _tr_flush_block;
 exports._tr_tally = _tr_tally;
 exports._tr_align = _tr_align;
 
-},{"../utils/common":74}],84:[function(require,module,exports){
+},{"../utils/common":75}],85:[function(require,module,exports){
 'use strict';
 
 
@@ -23952,7 +24234,7 @@ function ZStream() {
 
 module.exports = ZStream;
 
-},{}],85:[function(require,module,exports){
+},{}],86:[function(require,module,exports){
 (function (process,Buffer){
 var msg = require('pako/lib/zlib/messages');
 var zstream = require('pako/lib/zlib/zstream');
@@ -24192,7 +24474,7 @@ Zlib.prototype._error = function(status) {
 exports.Zlib = Zlib;
 
 }).call(this,require('_process'),require("buffer").Buffer)
-},{"_process":94,"buffer":87,"pako/lib/zlib/constants":76,"pako/lib/zlib/deflate.js":78,"pako/lib/zlib/inflate.js":80,"pako/lib/zlib/messages":82,"pako/lib/zlib/zstream":84}],86:[function(require,module,exports){
+},{"_process":95,"buffer":88,"pako/lib/zlib/constants":77,"pako/lib/zlib/deflate.js":79,"pako/lib/zlib/inflate.js":81,"pako/lib/zlib/messages":83,"pako/lib/zlib/zstream":85}],87:[function(require,module,exports){
 (function (process,Buffer){
 // Copyright Joyent, Inc. and other Node contributors.
 //
@@ -24806,7 +25088,7 @@ util.inherits(InflateRaw, Zlib);
 util.inherits(Unzip, Zlib);
 
 }).call(this,require('_process'),require("buffer").Buffer)
-},{"./binding":85,"_process":94,"_stream_transform":105,"assert":72,"buffer":87,"util":109}],87:[function(require,module,exports){
+},{"./binding":86,"_process":95,"_stream_transform":106,"assert":73,"buffer":88,"util":110}],88:[function(require,module,exports){
 (function (global){
 /*!
  * The buffer module from node.js, for the browser.
@@ -26599,7 +26881,7 @@ function isnan (val) {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"base64-js":88,"ieee754":89,"isarray":90}],88:[function(require,module,exports){
+},{"base64-js":89,"ieee754":90,"isarray":91}],89:[function(require,module,exports){
 'use strict'
 
 exports.byteLength = byteLength
@@ -26715,7 +26997,7 @@ function fromByteArray (uint8) {
   return parts.join('')
 }
 
-},{}],89:[function(require,module,exports){
+},{}],90:[function(require,module,exports){
 exports.read = function (buffer, offset, isLE, mLen, nBytes) {
   var e, m
   var eLen = nBytes * 8 - mLen - 1
@@ -26801,14 +27083,14 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
   buffer[offset + i - d] |= s * 128
 }
 
-},{}],90:[function(require,module,exports){
+},{}],91:[function(require,module,exports){
 var toString = {}.toString;
 
 module.exports = Array.isArray || function (arr) {
   return toString.call(arr) == '[object Array]';
 };
 
-},{}],91:[function(require,module,exports){
+},{}],92:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -27112,7 +27394,7 @@ function isUndefined(arg) {
   return arg === void 0;
 }
 
-},{}],92:[function(require,module,exports){
+},{}],93:[function(require,module,exports){
 if (typeof Object.create === 'function') {
   // implementation from standard node.js 'util' module
   module.exports = function inherits(ctor, superCtor) {
@@ -27137,7 +27419,7 @@ if (typeof Object.create === 'function') {
   }
 }
 
-},{}],93:[function(require,module,exports){
+},{}],94:[function(require,module,exports){
 /*!
  * Determine if an object is a Buffer
  *
@@ -27160,7 +27442,7 @@ function isSlowBuffer (obj) {
   return typeof obj.readFloatLE === 'function' && typeof obj.slice === 'function' && isBuffer(obj.slice(0, 0))
 }
 
-},{}],94:[function(require,module,exports){
+},{}],95:[function(require,module,exports){
 // shim for using process in browser
 var process = module.exports = {};
 
@@ -27342,7 +27624,7 @@ process.chdir = function (dir) {
 };
 process.umask = function() { return 0; };
 
-},{}],95:[function(require,module,exports){
+},{}],96:[function(require,module,exports){
 // a duplex stream is just a stream that is both readable and writable.
 // Since JS doesn't have multiple prototypal inheritance, this class
 // prototypally inherits from Readable, and then parasitically from
@@ -27418,7 +27700,7 @@ function forEach(xs, f) {
     f(xs[i], i);
   }
 }
-},{"./_stream_readable":96,"./_stream_writable":98,"core-util-is":101,"inherits":92,"process-nextick-args":103}],96:[function(require,module,exports){
+},{"./_stream_readable":97,"./_stream_writable":99,"core-util-is":102,"inherits":93,"process-nextick-args":104}],97:[function(require,module,exports){
 (function (process){
 'use strict';
 
@@ -28362,7 +28644,7 @@ function indexOf(xs, x) {
   return -1;
 }
 }).call(this,require('_process'))
-},{"./_stream_duplex":95,"./internal/streams/BufferList":99,"_process":94,"buffer":87,"buffer-shims":100,"core-util-is":101,"events":91,"inherits":92,"isarray":102,"process-nextick-args":103,"string_decoder/":106,"util":73}],97:[function(require,module,exports){
+},{"./_stream_duplex":96,"./internal/streams/BufferList":100,"_process":95,"buffer":88,"buffer-shims":101,"core-util-is":102,"events":92,"inherits":93,"isarray":103,"process-nextick-args":104,"string_decoder/":107,"util":74}],98:[function(require,module,exports){
 // a transform stream is a readable/writable stream where you do
 // something with the data.  Sometimes it's called a "filter",
 // but that's not a great name for it, since that implies a thing where
@@ -28545,7 +28827,7 @@ function done(stream, er, data) {
 
   return stream.push(null);
 }
-},{"./_stream_duplex":95,"core-util-is":101,"inherits":92}],98:[function(require,module,exports){
+},{"./_stream_duplex":96,"core-util-is":102,"inherits":93}],99:[function(require,module,exports){
 (function (process){
 // A bit simpler than readable streams.
 // Implement an async ._write(chunk, encoding, cb), and it'll handle all
@@ -29102,7 +29384,7 @@ function CorkedRequest(state) {
   };
 }
 }).call(this,require('_process'))
-},{"./_stream_duplex":95,"_process":94,"buffer":87,"buffer-shims":100,"core-util-is":101,"events":91,"inherits":92,"process-nextick-args":103,"util-deprecate":104}],99:[function(require,module,exports){
+},{"./_stream_duplex":96,"_process":95,"buffer":88,"buffer-shims":101,"core-util-is":102,"events":92,"inherits":93,"process-nextick-args":104,"util-deprecate":105}],100:[function(require,module,exports){
 'use strict';
 
 var Buffer = require('buffer').Buffer;
@@ -29167,7 +29449,7 @@ BufferList.prototype.concat = function (n) {
   }
   return ret;
 };
-},{"buffer":87,"buffer-shims":100}],100:[function(require,module,exports){
+},{"buffer":88,"buffer-shims":101}],101:[function(require,module,exports){
 (function (global){
 'use strict';
 
@@ -29279,7 +29561,7 @@ exports.allocUnsafeSlow = function allocUnsafeSlow(size) {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"buffer":87}],101:[function(require,module,exports){
+},{"buffer":88}],102:[function(require,module,exports){
 (function (Buffer){
 // Copyright Joyent, Inc. and other Node contributors.
 //
@@ -29390,9 +29672,9 @@ function objectToString(o) {
 }
 
 }).call(this,{"isBuffer":require("../../../../insert-module-globals/node_modules/is-buffer/index.js")})
-},{"../../../../insert-module-globals/node_modules/is-buffer/index.js":93}],102:[function(require,module,exports){
-arguments[4][90][0].apply(exports,arguments)
-},{"dup":90}],103:[function(require,module,exports){
+},{"../../../../insert-module-globals/node_modules/is-buffer/index.js":94}],103:[function(require,module,exports){
+arguments[4][91][0].apply(exports,arguments)
+},{"dup":91}],104:[function(require,module,exports){
 (function (process){
 'use strict';
 
@@ -29439,7 +29721,7 @@ function nextTick(fn, arg1, arg2, arg3) {
 }
 
 }).call(this,require('_process'))
-},{"_process":94}],104:[function(require,module,exports){
+},{"_process":95}],105:[function(require,module,exports){
 (function (global){
 
 /**
@@ -29510,10 +29792,10 @@ function config (name) {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],105:[function(require,module,exports){
+},{}],106:[function(require,module,exports){
 module.exports = require("./lib/_stream_transform.js")
 
-},{"./lib/_stream_transform.js":97}],106:[function(require,module,exports){
+},{"./lib/_stream_transform.js":98}],107:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -29736,16 +30018,16 @@ function base64DetectIncompleteChar(buffer) {
   this.charLength = this.charReceived ? 3 : 0;
 }
 
-},{"buffer":87}],107:[function(require,module,exports){
-arguments[4][92][0].apply(exports,arguments)
-},{"dup":92}],108:[function(require,module,exports){
+},{"buffer":88}],108:[function(require,module,exports){
+arguments[4][93][0].apply(exports,arguments)
+},{"dup":93}],109:[function(require,module,exports){
 module.exports = function isBuffer(arg) {
   return arg && typeof arg === 'object'
     && typeof arg.copy === 'function'
     && typeof arg.fill === 'function'
     && typeof arg.readUInt8 === 'function';
 }
-},{}],109:[function(require,module,exports){
+},{}],110:[function(require,module,exports){
 (function (process,global){
 // Copyright Joyent, Inc. and other Node contributors.
 //
@@ -30335,7 +30617,7 @@ function hasOwnProperty(obj, prop) {
 }
 
 }).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./support/isBuffer":108,"_process":94,"inherits":107}],110:[function(require,module,exports){
+},{"./support/isBuffer":109,"_process":95,"inherits":108}],111:[function(require,module,exports){
 'use strict';
 
 // VARIABLES //
@@ -30354,7 +30636,7 @@ UINT32_VIEW[ 0 ] = NINF;
 
 module.exports = FLOAT32_VIEW[ 0 ];
 
-},{}],111:[function(require,module,exports){
+},{}],112:[function(require,module,exports){
 'use strict';
 
 // VARIABLES //
@@ -30373,7 +30655,7 @@ UINT32_VIEW[ 0 ] = PINF;
 
 module.exports = FLOAT32_VIEW[ 0 ];
 
-},{}],112:[function(require,module,exports){
+},{}],113:[function(require,module,exports){
 (function (Buffer){
 /*! dicom-parser - v1.7.3 - 2016-08-18 | (c) 2014 Chris Hafey | https://github.com/chafey/dicomParser */
 (function (root, factory) {
@@ -33060,7 +33342,7 @@ var dicomParser = (function (dicomParser)
 }));
 
 }).call(this,require("buffer").Buffer)
-},{"buffer":87,"zlib":86}],113:[function(require,module,exports){
+},{"buffer":88,"zlib":87}],114:[function(require,module,exports){
 module.exports = function(strings) {
   if (typeof strings === 'string') strings = [strings]
   var exprs = [].slice.call(arguments,1)
@@ -33072,7 +33354,7 @@ module.exports = function(strings) {
   return parts.join('')
 }
 
-},{}],114:[function(require,module,exports){
+},{}],115:[function(require,module,exports){
 /*
  * Copyright (C) 2015 Michael Martinez
  * Changes: Added support for selection values 2-7, fixed minor bugs &
@@ -33128,7 +33410,7 @@ if ((moduleType !== 'undefined') && module.exports) {
     module.exports = jpeg.lossless.ComponentSpec;
 }
 
-},{}],115:[function(require,module,exports){
+},{}],116:[function(require,module,exports){
 /*
  * Copyright (C) 2015 Michael Martinez
  * Changes: Added support for selection values 2-7, fixed minor bugs &
@@ -33199,7 +33481,7 @@ if ((moduleType !== 'undefined') && module.exports) {
     module.exports = jpeg.lossless.DataStream;
 }
 
-},{}],116:[function(require,module,exports){
+},{}],117:[function(require,module,exports){
 /*
  * Copyright (C) 2015 Michael Martinez
  * Changes: Added support for selection values 2-7, fixed minor bugs &
@@ -34028,7 +34310,7 @@ if ((moduleType !== 'undefined') && module.exports) {
     module.exports = jpeg.lossless.Decoder;
 }
 
-},{"./data-stream.js":115,"./frame-header.js":117,"./huffman-table.js":118,"./quantization-table.js":120,"./scan-header.js":122,"./utils.js":123}],117:[function(require,module,exports){
+},{"./data-stream.js":116,"./frame-header.js":118,"./huffman-table.js":119,"./quantization-table.js":121,"./scan-header.js":123,"./utils.js":124}],118:[function(require,module,exports){
 /*
  * Copyright (C) 2015 Michael Martinez
  * Changes: Added support for selection values 2-7, fixed minor bugs &
@@ -34143,7 +34425,7 @@ if ((moduleType !== 'undefined') && module.exports) {
     module.exports = jpeg.lossless.FrameHeader;
 }
 
-},{"./component-spec.js":114,"./data-stream.js":115}],118:[function(require,module,exports){
+},{"./component-spec.js":115,"./data-stream.js":116}],119:[function(require,module,exports){
 /*
  * Copyright (C) 2015 Michael Martinez
  * Changes: Added support for selection values 2-7, fixed minor bugs &
@@ -34331,7 +34613,7 @@ if ((moduleType !== 'undefined') && module.exports) {
     module.exports = jpeg.lossless.HuffmanTable;
 }
 
-},{"./data-stream.js":115,"./utils.js":123}],119:[function(require,module,exports){
+},{"./data-stream.js":116,"./utils.js":124}],120:[function(require,module,exports){
 /*jslint browser: true, node: true */
 /*global require, module */
 
@@ -34357,7 +34639,7 @@ if ((moduleType !== 'undefined') && module.exports) {
     module.exports = jpeg;
 }
 
-},{"./component-spec.js":114,"./data-stream.js":115,"./decoder.js":116,"./frame-header.js":117,"./huffman-table.js":118,"./quantization-table.js":120,"./scan-component.js":121,"./scan-header.js":122,"./utils.js":123}],120:[function(require,module,exports){
+},{"./component-spec.js":115,"./data-stream.js":116,"./decoder.js":117,"./frame-header.js":118,"./huffman-table.js":119,"./quantization-table.js":121,"./scan-component.js":122,"./scan-header.js":123,"./utils.js":124}],121:[function(require,module,exports){
 /*
  * Copyright (C) 2015 Michael Martinez
  * Changes: Added support for selection values 2-7, fixed minor bugs &
@@ -34521,7 +34803,7 @@ if ((moduleType !== 'undefined') && module.exports) {
     module.exports = jpeg.lossless.QuantizationTable;
 }
 
-},{"./data-stream.js":115,"./utils.js":123}],121:[function(require,module,exports){
+},{"./data-stream.js":116,"./utils.js":124}],122:[function(require,module,exports){
 /*
  * Copyright (C) 2015 Michael Martinez
  * Changes: Added support for selection values 2-7, fixed minor bugs &
@@ -34578,7 +34860,7 @@ if ((moduleType !== 'undefined') && module.exports) {
     module.exports = jpeg.lossless.ScanComponent;
 }
 
-},{}],122:[function(require,module,exports){
+},{}],123:[function(require,module,exports){
 /*
  * Copyright (C) 2015 Michael Martinez
  * Changes: Added support for selection values 2-7, fixed minor bugs &
@@ -34689,7 +34971,7 @@ if ((moduleType !== 'undefined') && module.exports) {
     module.exports = jpeg.lossless.ScanHeader;
 }
 
-},{"./data-stream.js":115,"./scan-component.js":121}],123:[function(require,module,exports){
+},{"./data-stream.js":116,"./scan-component.js":122}],124:[function(require,module,exports){
 /*
  * Copyright (C) 2015 Michael Martinez
  * Changes: Added support for selection values 2-7, fixed minor bugs &
@@ -34783,7 +35065,7 @@ if ((moduleType !== 'undefined') && module.exports) {
     module.exports = jpeg.lossless.Utils;
 }
 
-},{}],124:[function(require,module,exports){
+},{}],125:[function(require,module,exports){
 'use strict';
 
 /**
@@ -34808,14 +35090,14 @@ function abs( x ) {
 
 module.exports = abs;
 
-},{}],125:[function(require,module,exports){
+},{}],126:[function(require,module,exports){
 'use strict';
 
 // EXPORTS //
 
 module.exports = Math.ceil;
 
-},{}],126:[function(require,module,exports){
+},{}],127:[function(require,module,exports){
 'use strict';
 
 // MODULES //
@@ -34854,7 +35136,7 @@ function div2( x ) {
 
 module.exports = div2;
 
-},{"math-floor":129}],127:[function(require,module,exports){
+},{"math-floor":130}],128:[function(require,module,exports){
 'use strict';
 
 // MODULES //
@@ -34977,7 +35259,7 @@ function binaryString( x ) {
 
 module.exports = binaryString;
 
-},{"./div2.js":126,"./mult2.js":128,"const-ninf-float32":110,"const-pinf-float32":111,"math-abs":124,"math-floor":129,"utils-left-pad-string":154,"utils-repeat-string":155,"utils-right-pad-string":156}],128:[function(require,module,exports){
+},{"./div2.js":127,"./mult2.js":129,"const-ninf-float32":111,"const-pinf-float32":112,"math-abs":125,"math-floor":130,"utils-left-pad-string":155,"utils-repeat-string":156,"utils-right-pad-string":157}],129:[function(require,module,exports){
 'use strict';
 
 // VARIABLES //
@@ -35033,14 +35315,14 @@ function mult2( x ) {
 
 module.exports = mult2;
 
-},{}],129:[function(require,module,exports){
+},{}],130:[function(require,module,exports){
 'use strict';
 
 // EXPORTS //
 
 module.exports = Math.floor;
 
-},{}],130:[function(require,module,exports){
+},{}],131:[function(require,module,exports){
 
 /*jslint browser: true, node: true */
 /*global require, module */
@@ -35252,7 +35534,7 @@ if ((moduleType !== 'undefined') && module.exports) {
     module.exports = nifti;
 }
 
-},{"./nifti1.js":131,"./nifti2.js":132,"./utilities.js":133,"pako":135}],131:[function(require,module,exports){
+},{"./nifti1.js":132,"./nifti2.js":133,"./utilities.js":134,"pako":136}],132:[function(require,module,exports){
 
 /*jslint browser: true, node: true */
 /*global */
@@ -36119,7 +36401,7 @@ if ((moduleType !== 'undefined') && module.exports) {
     module.exports = nifti.NIFTI1;
 }
 
-},{"./utilities.js":133}],132:[function(require,module,exports){
+},{"./utilities.js":134}],133:[function(require,module,exports){
 
 /*jslint browser: true, node: true */
 /*global */
@@ -36517,7 +36799,7 @@ if ((moduleType !== 'undefined') && module.exports) {
     module.exports = nifti.NIFTI2;
 }
 
-},{"./nifti1.js":131,"./utilities.js":133}],133:[function(require,module,exports){
+},{"./nifti1.js":132,"./utilities.js":134}],134:[function(require,module,exports){
 
 /*jslint browser: true, node: true */
 /*global require, module */
@@ -36677,7 +36959,7 @@ if ((moduleType !== 'undefined') && module.exports) {
     module.exports = nifti.Utils;
 }
 
-},{}],134:[function(require,module,exports){
+},{}],135:[function(require,module,exports){
 "use strict";
 var assert = require('assert');
 
@@ -37925,7 +38207,7 @@ function serializeToTextBuffer(data) {
     return buffer;
 }
 
-},{"assert":72}],135:[function(require,module,exports){
+},{"assert":73}],136:[function(require,module,exports){
 // Top level file is just a mixin of submodules & constants
 'use strict';
 
@@ -37941,7 +38223,7 @@ assign(pako, deflate, inflate, constants);
 
 module.exports = pako;
 
-},{"./lib/deflate":136,"./lib/inflate":137,"./lib/utils/common":138,"./lib/zlib/constants":141}],136:[function(require,module,exports){
+},{"./lib/deflate":137,"./lib/inflate":138,"./lib/utils/common":139,"./lib/zlib/constants":142}],137:[function(require,module,exports){
 'use strict';
 
 
@@ -38343,7 +38625,7 @@ exports.deflate = deflate;
 exports.deflateRaw = deflateRaw;
 exports.gzip = gzip;
 
-},{"./utils/common":138,"./utils/strings":139,"./zlib/deflate":143,"./zlib/messages":148,"./zlib/zstream":150}],137:[function(require,module,exports){
+},{"./utils/common":139,"./utils/strings":140,"./zlib/deflate":144,"./zlib/messages":149,"./zlib/zstream":151}],138:[function(require,module,exports){
 'use strict';
 
 
@@ -38763,9 +39045,9 @@ exports.inflate = inflate;
 exports.inflateRaw = inflateRaw;
 exports.ungzip  = inflate;
 
-},{"./utils/common":138,"./utils/strings":139,"./zlib/constants":141,"./zlib/gzheader":144,"./zlib/inflate":146,"./zlib/messages":148,"./zlib/zstream":150}],138:[function(require,module,exports){
-arguments[4][74][0].apply(exports,arguments)
-},{"dup":74}],139:[function(require,module,exports){
+},{"./utils/common":139,"./utils/strings":140,"./zlib/constants":142,"./zlib/gzheader":145,"./zlib/inflate":147,"./zlib/messages":149,"./zlib/zstream":151}],139:[function(require,module,exports){
+arguments[4][75][0].apply(exports,arguments)
+},{"dup":75}],140:[function(require,module,exports){
 // String encode/decode helpers
 'use strict';
 
@@ -38952,13 +39234,13 @@ exports.utf8border = function (buf, max) {
   return (pos + _utf8len[buf[pos]] > max) ? pos : max;
 };
 
-},{"./common":138}],140:[function(require,module,exports){
-arguments[4][75][0].apply(exports,arguments)
-},{"dup":75}],141:[function(require,module,exports){
+},{"./common":139}],141:[function(require,module,exports){
 arguments[4][76][0].apply(exports,arguments)
 },{"dup":76}],142:[function(require,module,exports){
 arguments[4][77][0].apply(exports,arguments)
 },{"dup":77}],143:[function(require,module,exports){
+arguments[4][78][0].apply(exports,arguments)
+},{"dup":78}],144:[function(require,module,exports){
 'use strict';
 
 var utils   = require('../utils/common');
@@ -40808,7 +41090,7 @@ exports.deflatePrime = deflatePrime;
 exports.deflateTune = deflateTune;
 */
 
-},{"../utils/common":138,"./adler32":140,"./crc32":142,"./messages":148,"./trees":149}],144:[function(require,module,exports){
+},{"../utils/common":139,"./adler32":141,"./crc32":143,"./messages":149,"./trees":150}],145:[function(require,module,exports){
 'use strict';
 
 
@@ -40850,19 +41132,19 @@ function GZheader() {
 
 module.exports = GZheader;
 
-},{}],145:[function(require,module,exports){
-arguments[4][79][0].apply(exports,arguments)
-},{"dup":79}],146:[function(require,module,exports){
+},{}],146:[function(require,module,exports){
 arguments[4][80][0].apply(exports,arguments)
-},{"../utils/common":138,"./adler32":140,"./crc32":142,"./inffast":145,"./inftrees":147,"dup":80}],147:[function(require,module,exports){
+},{"dup":80}],147:[function(require,module,exports){
 arguments[4][81][0].apply(exports,arguments)
-},{"../utils/common":138,"dup":81}],148:[function(require,module,exports){
+},{"../utils/common":139,"./adler32":141,"./crc32":143,"./inffast":146,"./inftrees":148,"dup":81}],148:[function(require,module,exports){
 arguments[4][82][0].apply(exports,arguments)
-},{"dup":82}],149:[function(require,module,exports){
+},{"../utils/common":139,"dup":82}],149:[function(require,module,exports){
 arguments[4][83][0].apply(exports,arguments)
-},{"../utils/common":138,"dup":83}],150:[function(require,module,exports){
+},{"dup":83}],150:[function(require,module,exports){
 arguments[4][84][0].apply(exports,arguments)
-},{"dup":84}],151:[function(require,module,exports){
+},{"../utils/common":139,"dup":84}],151:[function(require,module,exports){
+arguments[4][85][0].apply(exports,arguments)
+},{"dup":85}],152:[function(require,module,exports){
 /**
  * @author aleeper / http://adamleeper.com/
  * @author mrdoob / http://mrdoob.com/
@@ -41360,7 +41642,7 @@ arguments[4][84][0].apply(exports,arguments)
 
  }
 
-},{}],152:[function(require,module,exports){
+},{}],153:[function(require,module,exports){
 /**
  * @author Eberhard Graether / http://egraether.com/
  * @author Mark Lundin 	/ http://mark-lundin.com
@@ -42002,7 +42284,7 @@ function preventEvent( event ) { event.preventDefault(); }
 
 TrackballControls.prototype = Object.create( THREE.EventDispatcher.prototype );
 
-},{"three":153}],153:[function(require,module,exports){
+},{"three":154}],154:[function(require,module,exports){
 var self = self || {};// File:src/Three.js
 
 /**
@@ -82572,7 +82854,7 @@ if (typeof exports !== 'undefined') {
   this['THREE'] = THREE;
 }
 
-},{}],154:[function(require,module,exports){
+},{}],155:[function(require,module,exports){
 'use strict';
 
 // MODULES //
@@ -82635,7 +82917,7 @@ function lpad( str, len, pad ) {
 
 module.exports = lpad;
 
-},{"math-ceil":125,"utils-repeat-string":155,"validate.io-nonnegative-integer":158,"validate.io-string-primitive":160}],155:[function(require,module,exports){
+},{"math-ceil":126,"utils-repeat-string":156,"validate.io-nonnegative-integer":159,"validate.io-string-primitive":161}],156:[function(require,module,exports){
 'use strict';
 
 // MODULES //
@@ -82728,7 +83010,7 @@ function repeat( str, n ) {
 
 module.exports = repeat;
 
-},{"validate.io-nonnegative-integer":158,"validate.io-string-primitive":160}],156:[function(require,module,exports){
+},{"validate.io-nonnegative-integer":159,"validate.io-string-primitive":161}],157:[function(require,module,exports){
 'use strict';
 
 // MODULES //
@@ -82791,7 +83073,7 @@ function rpad( str, len, pad ) {
 
 module.exports = rpad;
 
-},{"math-ceil":125,"utils-repeat-string":155,"validate.io-nonnegative-integer":158,"validate.io-string-primitive":160}],157:[function(require,module,exports){
+},{"math-ceil":126,"utils-repeat-string":156,"validate.io-nonnegative-integer":159,"validate.io-string-primitive":161}],158:[function(require,module,exports){
 /**
 *
 *	VALIDATE: integer
@@ -82845,7 +83127,7 @@ function isInteger( value ) {
 
 module.exports = isInteger;
 
-},{"validate.io-number":159}],158:[function(require,module,exports){
+},{"validate.io-number":160}],159:[function(require,module,exports){
 /**
 *
 *	VALIDATE: nonnegative-integer
@@ -82899,7 +83181,7 @@ function isNonNegativeInteger( value ) {
 
 module.exports = isNonNegativeInteger;
 
-},{"validate.io-integer":157}],159:[function(require,module,exports){
+},{"validate.io-integer":158}],160:[function(require,module,exports){
 /**
 *
 *	VALIDATE: number
@@ -82946,7 +83228,7 @@ function isNumber( value ) {
 
 module.exports = isNumber;
 
-},{}],160:[function(require,module,exports){
+},{}],161:[function(require,module,exports){
 'use strict';
 
 /**
@@ -82964,4 +83246,4 @@ function isString( value ) {
 
 module.exports = isString;
 
-},{}]},{},[8]);
+},{}]},{},[9]);

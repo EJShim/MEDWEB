@@ -1,6 +1,7 @@
 var AMI = require("ami.js");
 var E_DicomLoader = AMI.default.Loaders.Volume;
 var E_Volume = require("../Data/E_Volume.js");
+var E_VolumeS = require("../Data/E_VolumeS.js");
 var E_Histogram = require("../Data/E_Histogram.js");
 
 
@@ -11,6 +12,7 @@ function E_VolumeManager(Mgr)
   this.Mgr = Mgr;
 
   this.m_selectedVolumeIdx = -1;
+  this.m_selectedOpacityIndex = -1;
   this.m_volumeList = [];
 
   var m_histogram = new E_Histogram();
@@ -56,7 +58,7 @@ E_VolumeManager.prototype.ImportVolume = function(buffer)
     var series = seriesContainer[0].mergeSeries(seriesContainer);
     var data = series[0].stack[0];
 
-    var volume = new E_Volume(data);
+    var volume = new E_VolumeS(data);
     return volume
   })
   .then(function(volume){
@@ -64,7 +66,7 @@ E_VolumeManager.prototype.ImportVolume = function(buffer)
     that.Mgr.Redraw();
   })
   .catch(function(error){
-    console.log("Volme Add Error: " + error);
+    window.console.log("Volme Add Error: " + error);
   })
 }
 
@@ -72,6 +74,7 @@ E_VolumeManager.prototype.AddVolume = function(volume)
 {
   var renderer = this.Mgr.GetRenderer(this.Mgr.VIEW_MAIN);
   volume.AddToRenderer(renderer)
+  //renderer.scene.add(volume);
 
   this.m_volumeList.push(volume);
   this.SetSelectedVolume(this.m_volumeList.length -1);
@@ -93,6 +96,95 @@ E_VolumeManager.prototype.UpdateHistogram = function()
   var lut = this.GetSelectedVolume().GetLUT();
 
   this.GetHistogram().Update(lut)
+}
+
+E_VolumeManager.prototype.OnClickedOpacity = function(x, y)
+{
+  if(this.m_selectedVolumeIdx == -1) return;
+
+  var canvas = document.getElementById("ID_VIEW_LUT");
+
+  x = x/canvas.width;
+  y = 1.0 - y/canvas.height;
+
+  var otf = this.GetSelectedVolume().GetLUT()._opacity;
+
+  for(var i=0 ; i<otf.length ; i++){
+    if(Math.abs(otf[i][0]-x) < 0.1 && Math.abs(otf[i][1]-y) < 0.1){
+      this.m_selectedOpacityIndex = i;
+    }
+  }
+
+  if(this.m_selectedOpacityIndex == -1){
+    this.GenerateOpacityPoint(x, y);
+  }
+}
+
+E_VolumeManager.prototype.GenerateOpacityPoint = function(x,y)
+{
+  var otf = this.GetSelectedVolume().GetLUT()._opacity;
+
+  for(var i=0 ; i<otf.length ; i++){
+    if(x > otf[i][0] && x < otf[i+1][0]){
+      otf.splice(i+1, 0, [x, y]);
+      this.m_selectedOpacityIndex = i+1;
+      break;
+    }
+  }
+
+  this.GetSelectedVolume().UpdateLUT();
+  this.UpdateHistogram();
+  this.Mgr.Redraw();
+}
+
+E_VolumeManager.prototype.OnMoveOpacity = function(x, y)
+{
+  if(this.m_selectedVolumeIdx == -1) return;
+  if(this.m_selectedOpacityIndex == -1) return;
+
+  var canvas = document.getElementById("ID_VIEW_LUT");
+  var volume = this.GetSelectedVolume();
+  var otf = volume.GetLUT()._opacity;
+
+  x = x/canvas.width;
+  y = 1.0 - y/canvas.height;
+
+  if(x < 0) x = 0;
+  if(y < 0) y = 0;
+  if(x > 1) x = 1;
+  if(y > 1) y = 1;
+
+  if(this.m_selectedOpacityIndex > 0){
+    if(x < otf[this.m_selectedOpacityIndex-1][0]){
+      x = otf[this.m_selectedOpacityIndex-1][0];
+    }
+  }else{
+    x = 0;
+  }
+
+  if(this.m_selectedOpacityIndex < otf.length -1){
+    if(x > otf[this.m_selectedOpacityIndex+1][0]){
+      x = otf[this.m_selectedOpacityIndex+1][0];
+    }
+  }else{
+    x = 1;
+  }
+
+
+  //Set otf
+  otf[this.m_selectedOpacityIndex] = [x, y];
+
+  //Update Volumevolume
+  volume.UpdateLUT();
+
+  this.UpdateHistogram();
+  this.Mgr.Redraw();
+}
+
+
+E_VolumeManager.prototype.OnReleaseOpacity = function()
+{
+  this.m_selectedOpacityIndex = -1;
 }
 
 module.exports = E_VolumeManager;

@@ -25,6 +25,7 @@ E_Histogram.prototype.OnResizeCanvas = function()
 
 E_Histogram.prototype.Update = function(lut)
 {
+  this.OnResizeCanvas();
   var ctx = this.domElement.getContext('2d');
   ctx.clearRect(0, 0, this.domElement.width, this.domElement.height);
 
@@ -37,6 +38,8 @@ E_Histogram.prototype.Update = function(lut)
   ctx.fillStyle = color;
   ctx.fillRect(0, 0, this.domElement.width, this.domElement.height);
 
+  ctx.globalCompositeOperation = "destination-over"
+
   var opacity = ctx.createLinearGradient(0, 0, this.domElement.width, 0);
 
   for(var i=0 ; i<lut._opacity.length ; i++){
@@ -46,6 +49,7 @@ E_Histogram.prototype.Update = function(lut)
   ctx.fillStyle = opacity;
   ctx.fillRect(0, 0, this.domElement.width, this.domElement.height);
 
+
   //Add Opacity Point
   ctx.globalCompositeOperation = "source-over";
 
@@ -54,10 +58,10 @@ E_Histogram.prototype.Update = function(lut)
     var x = lut._opacity[i][0] * this.domElement.width;
     var y = this.domElement.height - lut._opacity[i][1] * this.domElement.height;
 
+
     ctx.lineTo(x, y);
     ctx.arc(x, y, 2, 0, 2*Math.PI, true);
     ctx.stroke();
-
     ctx.moveTo(x, y);
   }
 

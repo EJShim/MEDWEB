@@ -115,3 +115,21 @@ $$("ID_CHAT_INPUT").attachEvent("onKeyPress", function(code, e){
     ///this.setValue("");
   }
 });
+
+
+
+
+//Histogram
+
+//$$("ID_VIEW_VOLUME_LUT")
+$("#ID_VIEW_LUT").mousedown(function(e){
+  Manager.VolumeMgr().OnClickedOpacity(e.offsetX, e.offsetY);
+});
+
+$(document).mousemove(function(e){
+  Manager.VolumeMgr().OnMoveOpacity(e.offsetX, e.offsetY);
+});
+
+$(document).mouseup(function(e){
+  Manager.VolumeMgr().OnReleaseOpacity();
+});

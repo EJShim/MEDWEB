@@ -10,6 +10,7 @@ function E_Volume(stack)
   this.SLICE_COR = 2;
   this.SLICE_SAG = 3;
 
+
   this.actor = null;
 
   //Prepare Volume Data
@@ -30,7 +31,7 @@ function E_Volume(stack)
 
   //Scene for Double Pass Rendering
   var m_sceneRTT = new THREE.Scene();
-  var m_RTT = new THREE.WebGLRenderTarget( window.innerWidth, window.innerHeight, {minFilter:THREE.LinearFilter, magFilter:THREE.NearestFilter, format:THREE.RGBAFormat}) ;
+  var m_RTT = new THREE.WebGLRenderTarget( 100, 100, {minFilter:THREE.LinearFilter, magFilter:THREE.NearestFilter, format:THREE.RGBAFormat}) ;
 
 
 
@@ -91,9 +92,19 @@ E_Volume.prototype.Initialize = function()
 
   //Initialize LUT
   var lut = this.GetLUT();
-  var range = this.GetVolumeData().minMax;
+
+  //Set Volume Data Window Level
+  var volumeData = this.GetVolumeData();
+  var range = volumeData.minMax;
+  volumeData.windowWidth = range[1] - range[0] - 1;
+  volumeData.windowCenter = (range[1] + range[0] - 1) / 2;
+
+
+
+
   var width = range[1] - range[0];
 
+  //SET OTP and CTP
   var CTPbone = [
     [0, 0, 0, 0],
     [.2, .73, .25, .30],
@@ -137,7 +148,7 @@ E_Volume.prototype.GetCenter = function(){
 
 E_Volume.prototype.SetCustomShader = function()
 {
-  //var offset = new THREE.Vector3(-0.5, -0.5, -0.5);
+  var offset = new THREE.Vector3(-3.0, -3.0, -3.0);
   var data = this.GetVolumeData();
 
   var boxGeometry = new THREE.BoxGeometry(
@@ -147,9 +158,9 @@ E_Volume.prototype.SetCustomShader = function()
   );
 
   boxGeometry.applyMatrix(new THREE.Matrix4().makeTranslation(
-    data.halfDimensionsIJK.x - 0.5,
-    data.halfDimensionsIJK.y - 0.5,
-    data.halfDimensionsIJK.z - 0.5
+    data.halfDimensionsIJK.x + offset.x,
+    data.halfDimensionsIJK.y + offset.y,
+    data.halfDimensionsIJK.z + offset.z
   ));
 
   var uniformFirstPass = this.firstPassUniforms();
@@ -187,6 +198,8 @@ E_Volume.prototype.SetCustomShader = function()
     textures.push(tex);
   }
 
+  console.log(data.bitsAllocated);
+
   var uniformSecondPass = this.SecondPassUniforms();
   uniformSecondPass.uTextureSize.value = data.textureSize;
   uniformSecondPass.uTextureContainer.value = textures;
@@ -218,7 +231,6 @@ E_Volume.prototype.SetCustomShader = function()
   // this.material.needsUpdate = true;
   // this.material = materialSecondPass;
   this.actor = new THREE.Mesh(boxGeometry, materialSecondPass);
-
   this.actor.applyMatrix(data._ijk2LPS);
 }
 
@@ -226,13 +238,14 @@ E_Volume.prototype.UpdateLUT = function()
 {
   var lut = this.GetLUT();
   lut.paintCanvas();
-
   this.actor.material.uniforms.uTextureLUT.value = lut.texture;
 }
 
 E_Volume.prototype.AddToRenderer = function(renderer)
 {
   renderer.scene.add(this.actor);
+  var slice = this.GetSliceImage();
+  renderer.scene.add(slice[0]);
 }
 
 E_Volume.prototype.firstPassUniforms = function()

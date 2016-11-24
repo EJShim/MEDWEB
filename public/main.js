@@ -61,8 +61,8 @@ webix.ui({
         {id:"ID_UPLOAD_VOLUME", view:"button", value:"Import Dicom", width:100},
         {
           view:"segmented", id:"ID_SEGMENT_RESIZE", gravity:0.3, options:[
-            {id:"ID_BUTTON_VIEW_1VIEW", value:"1 View"},
-            {id:"ID_BUTTON_VIEW_4VIEW", value:"4 View"}
+            {id:"ID_BUTTON_VIEW_4VIEW", value:"4 View"},
+            {id:"ID_BUTTON_VIEW_1VIEW", value:"1 View"}
           ]
         }
       ]
