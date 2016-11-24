@@ -5,10 +5,9 @@ var E_VolumeActor = AMI.default.Helpers.VolumeRendering;
 
 function E_VolumeS(stack)
 {
-  this.SLICE_3D = 0;
-  this.SLICE_AXL = 1;
-  this.SLICE_COR = 2;
-  this.SLICE_SAG = 3;
+  this.SLICE_AXL = 0;
+  this.SLICE_COR = 1;
+  this.SLICE_SAG = 2;
 
   //this.actor = null;
 
@@ -22,10 +21,10 @@ function E_VolumeS(stack)
   this.actor = null;
 
   //Init Slice Image
-  var m_sliceImages = [];
-  for(var i=0 ; i<4 ; i++){
-    m_sliceImages[i] = new E_SliceImage(stack);
-  }
+  var m_3DsliceImages = [];
+  var m_2DsliceImages = [];
+
+
 
   var m_lut = new E_Lut("ID_VIEW_LUT", "default", "linear");
 
@@ -39,10 +38,16 @@ function E_VolumeS(stack)
     return m_lut;
   }
 
-  this.GetSliceImage = function(idx)
+  this.Get3DSliceImage = function(idx)
   {
-    if(idx == null) return m_sliceImages;
-    return m_sliceImages[idx];
+    if(idx == null) return m_3DsliceImages;
+    return m_3DsliceImages[idx];
+  }
+
+  this.Get2DSliceImage = function(idx)
+  {
+    if(idx == null) return m_2DsliceImages;
+    return m_2DsliceImages[idx];
   }
 
   this.GetSceneRTT= function(){
@@ -60,23 +65,6 @@ function E_VolumeS(stack)
 
 E_VolumeS.prototype.Initialize = function()
 {
-  //Initialize Slice Image
-  var sliceImages = this.GetSliceImage();
-
-  //Main View Slice Image
-  sliceImages[0].bbox.visible = false;
-  sliceImages[0].border.color = 0xF44336;
-
-  //AXL View Slice Image
-  sliceImages[1].bbox.visible = false;
-  sliceImages[1].border.color = 0xF40000;
-
-  sliceImages[2].bbox.visible = false;
-  sliceImages[2].border.color = 0x00F400;
-
-  sliceImages[3].bbox.visible = false;
-  sliceImages[3].border.color = 0x0000F4;
-
 
   //Set Volume Data Window Level
   var volumeData = this.GetVolumeData();
@@ -88,7 +76,6 @@ E_VolumeS.prototype.Initialize = function()
   //SET OTP and CTP
   var CTPbone = [
     [0, 0, 0, 0],
-    [.3, .73, .25, .30],
     [.5, .73, .25, .30],
     [.6, .9, .82, .56],
     [1, 1, 1, 1]
@@ -99,15 +86,62 @@ E_VolumeS.prototype.Initialize = function()
     [1, 1]
   ]
 
-
   var lut = this.GetLUT();
   lut._color = CTPbone;
   lut._opacity = OTPbone;
 
+
+
+  //Build Slice Images
+
+  //Initialize Slice Image
+  var sliceImages3D = this.Get3DSliceImage();
+  var sliceImages2D = this.Get2DSliceImage();
+
+  for(var i=0 ; i<4 ; i++){
+    sliceImages3D[i] = new E_SliceImage( volumeData );
+    sliceImages2D[i] = new E_SliceImage( volumeData );
+  }
+
+  //AXL
+  sliceImages3D[0].bbox.visible = false;
+  sliceImages3D[0].border.color = 0xF40000;
+
+  sliceImages2D[0].bbox.visible = false;
+  sliceImages2D[0].border.color = 0xF40000;
+
+  //COR
+  sliceImages3D[1].slice.planeDirection = new THREE.Vector3(0, 1, 0);
+  sliceImages3D[1].up = new THREE.Vector3(1, 0, 0);
+  sliceImages3D[1].border.helpersSlice = sliceImages3D[1].slice;
+  sliceImages3D[1].border.color = 0x00F400;
+  sliceImages3D[1].bbox.visible = false;
+
+  sliceImages2D[1].slice.planeDirection = new THREE.Vector3(0, 1, 0);
+  sliceImages2D[1].border.helpersSlice = sliceImages2D[1].slice;
+  sliceImages2D[1].border.color = 0x00F400;
+  sliceImages2D[1].bbox.visible = false;
+
+  //SAG
+  sliceImages3D[2].slice.planeDirection = new THREE.Vector3(1, 0, 0);
+  sliceImages3D[2].border.helpersSlice = sliceImages3D[2].slice;
+  sliceImages3D[2].border.color = 0x0000F4;
+  sliceImages3D[2].bbox.visible = false;
+
+  sliceImages2D[2].slice.planeDirection = new THREE.Vector3(1, 0, 0);
+  sliceImages2D[2].border.helpersSlice = sliceImages2D[2].slice;
+  sliceImages2D[2].border.color = 0x0000F4;
+  sliceImages2D[2].bbox.visible = false;
+
+  console.log(sliceImages3D[0]);
+  console.log(sliceImages3D[1]);
+
   //Add actor && Initialize Informations
   this.actor = new E_VolumeActor( volumeData );
   this.actor.uniforms.uLut.value = 1
+  this.actor.uniforms.uAlphaCorrection.value = 1.0;
   this.actor.uniforms.uWindowCenterWidth.value = [volumeData.windowCenter, volumeData.windowWidth];
+
 }
 
 E_VolumeS.prototype.UpdateLUT = function()
@@ -115,39 +149,65 @@ E_VolumeS.prototype.UpdateLUT = function()
   var lut = this.GetLUT();
   lut.paintCanvas();
   this.actor.uniforms.uTextureLUT.value = lut.texture;
-
 }
 
-E_VolumeS.prototype.MoveSliceImage = function( value )
+E_VolumeS.prototype.MoveSliceImage = function(idx, value )
 {
-  var sliceImages = this.GetSliceImage();
-  if(value > 0){
-    if(this.GetSliceImage(0).index >= this.GetVolumeData().dimensionsIJK.z -1 ) return;
+  var sliceImage3D = this.Get3DSliceImage(idx);
+  var sliceImage2D = this.Get2DSliceImage(idx);
 
-    for(var i in sliceImages){
-      sliceImages[i].index++;
-    }
+  if(value > 0){
+    if(sliceImage3D.index >= this.GetVolumeData().dimensionsIJK.z -1 ) return;
+      sliceImage3D.slice.planePosition.x += 0.625;
+      sliceImage2D.slice.planePosition.x += 0.625;
+
   }else{
-    if(this.GetSliceImage(0).index <= 0) return;
-    for(var i in sliceImages){
-      sliceImages[i].index--;
-    }
+    if(sliceImage3D.index <= 0) return;
+    sliceImage3D.slice.planePosition.x -= 0.625;
+    sliceImage2D.slice.planePosition.x -= 0.625;
+
   }
 }
 
-E_VolumeS.prototype.AddToRenderer = function(renderer)
+E_VolumeS.prototype.AddToRenderer = function(renderers)
 {
-  var center = this.GetVolumeData().worldCenter();
-  renderer.scene.add(this.actor);
+  var volumeData = this.GetVolumeData();
+  var center = volumeData.worldCenter();
 
-  renderer.camera.lookAt(center.x, center.y, center.z)
-  renderer.camera.updateProjectionMatrix();
-  renderer.control.target.set(center.x, center.y, center.z);
+  var worldbb = volumeData.worldBoundingBox();
+    var lpsDims = new THREE.Vector3(
+      worldbb[1] - worldbb[0],
+      worldbb[3] - worldbb[2],
+      worldbb[5] - worldbb[4]
+    );
+
+  var bbox = {
+    center: center,
+    halfDimensions: new THREE.Vector3(lpsDims.x + 10, lpsDims.y + 10, lpsDims.z + 10)
+  };
 
 
+  renderers[0].scene.add(this.actor);
+  renderers[0].camera.lookAt(center.x, center.y, center.z)
+  renderers[0].camera.updateProjectionMatrix();
+  renderers[0].control.target.set(center.x, center.y, center.z);
 
-  var slice = this.GetSliceImage(0);
-  renderer.scene.add(slice);
+  for(var i=0 ; i<3 ; i++){
+    //Add Slice Image in 3D Renderer
+    var slice3D = this.Get3DSliceImage(i);
+    renderers[0].scene.add(slice3D);
+
+    // Add slice Image in 2D renderer
+    var slice2D = this.Get2DSliceImage(i);
+    renderers[i+1].scene.add(slice2D);
+  }
+
+
+  //Reset Camera
+  renderers[1].camera.init(volumeData.xCosine, volumeData.yCosine, volumeData.zCosine, renderers[1].control, bbox, renderers[1].domElement);
+  renderers[2].camera.init(volumeData.zCosine, volumeData.xCosine, volumeData.yCosine, renderers[2].control, bbox, renderers[2].domElement);
+  renderers[3].camera.init(volumeData.yCosine, volumeData.zCosine, volumeData.xCosine, renderers[3].control, bbox, renderers[3].domElement);
 }
+
 
 module.exports = E_VolumeS;

@@ -90,6 +90,7 @@ $$("ID_UPLOAD_VOLUME").attachEvent("onItemClick", function(){
   var buffer = []
   for(var i=0 ; i<ev.target.files.length ; i++){
     var path = URL.createObjectURL(ev.target.files[i]);
+    console.log(ev.target.files[0].type);
     buffer.push(path);
   }
   Manager.VolumeMgr().ImportVolume(buffer);

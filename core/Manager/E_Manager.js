@@ -1,13 +1,17 @@
-var TrackballControls = require('three-trackballcontrols');
 var E_MeshManager = require("./E_MeshManager.js");
 var E_VolumeManager = require("./E_VolumeManager.js");
 var E_SocketManager = require("./E_SocketManager.js");
 var E_Interactor = require("./E_Interactor.js");
+var E_Interactor2D = require("./E_Interactor2D.js");
+
+var AMI = require("ami.js");
+var E_OrthographicCamera = AMI.default.Cameras.Orthographic;
 
 
 function E_Manager()
 {
   this.NUM_VIEW = 4;
+
   this.VIEW_MAIN = 0;
   this.VIEW_2D_AXL = 1;
   this.VIEW_2D_COR = 2;
@@ -70,7 +74,13 @@ E_Manager.prototype.Initialize = function()
     renderer[i].pointLight = new THREE.PointLight(0xffffff);
     renderer[i].scene.add(renderer[i].pointLight);
 
-    renderer[i].camera = new THREE.PerspectiveCamera( 45, renWin[i].$width/renWin[i].$height, 0.1, 10000000000 );
+    //Initialize Camera
+    if(i == 0){
+      renderer[i].camera = new THREE.PerspectiveCamera( 45, renWin[i].$width/renWin[i].$height, 0.1, 10000000000 );
+    }else{
+      renderer[i].camera = new E_OrthographicCamera( renWin[i].$width / -2, renWin[i].$width / 2, renWin[i].$height / 2, renWin[i].$height / -2, 0.1, 100000 );
+    }
+
     renderer[i].camera.position.set(0, 0, -20);
     renderer[i].camera.lookAt(new THREE.Vector3(0, 0, 0));
     renderer[i].setClearColor(0x00004a);
@@ -78,31 +88,18 @@ E_Manager.prototype.Initialize = function()
     //Attach to the Viewport
     renWin[i].getNode().replaceChild(renderer[i].domElement, renWin[i].$view.childNodes[0] );
 
-    //Initialize control
-    renderer[i].control = new TrackballControls(renderer[i].camera, renderer[i].domElement );
-    renderer[i].control.rotateSpeed = 4.0;
-    renderer[i].control.zoomSpeed = 1.2;
-    renderer[i].control.panSpeed = 0.8;
-    renderer[i].control.noZoom = false;
-    renderer[i].control.noPan = false;
-    renderer[i].control.staticMoving = true;
-    renderer[i].control.dynamicDampingFactor = 0.3;
-    renderer[i].control.keys = [ 65, 83, 68 ];
-    renderer[i].control.addEventListener( 'change', this.Redraw.bind(this) );
 
-    //Initialize Interactor
-    renderer[i].interactor = new E_Interactor(this, renderer[i]);
+    //Initialize Interactor && Trackball controls
+    if(i == 0){
+      renderer[i].interactor = new E_Interactor(this, renderer[i]);
+    }else{
+      renderer[i].interactor = new E_Interactor2D(this, i-1, renderer[i]);
+    }
 
   }
 
   //Initialize Renderer Size
   this.UpdateWindowSize();
-
-  //Initialize Test Mesh
-  var geometry = new THREE.BoxGeometry( 10, 10, 10 );
-  var material = new THREE.MeshPhongMaterial({color:0xff0000, shading:THREE.SmoothShading, shininess:5, specular:0xaaaaaa});
-  var cube = new THREE.Mesh( geometry, material );
-  renderer[2].scene.add( cube );
 
   //Redraw
   this.Redraw();
@@ -110,10 +107,11 @@ E_Manager.prototype.Initialize = function()
 
 E_Manager.prototype.Animate = function()
 {
-
-  for(var i=0 ; i<this.NUM_VIEW ; i++){
+  //Update Main View TrackballControls;
+  for(var i=0 ; i<4 ; i++){
     this.GetRenderer(i).control.update();
   }
+
   requestAnimationFrame( this.Animate.bind(this) );
 }
 
@@ -211,7 +209,9 @@ E_Manager.prototype.UpdateWindowSize = function()
     renderer[i].setSize(renWin[i].$width, renWin[i].$height);
     renderer[i].camera.aspect = renWin[i].$width/renWin[i].$height;
     renderer[i].camera.updateProjectionMatrix();
+
     renderer[i].control.handleResize();
+
   }
 
   //Update Histogram canvas

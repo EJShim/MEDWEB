@@ -1,3 +1,5 @@
+var TrackballControls = require('three-trackballcontrols');
+
 function E_Interactor(Mgr, renderer)
 {
   this.Mgr = Mgr;
@@ -22,6 +24,19 @@ E_Interactor.prototype.Initialize = function()
   canvas.addEventListener( 'touchstart', this.OnMouseDown.bind(this), false );
   canvas.addEventListener( 'touchend', this.OnMouseUp.bind(this), false );
   canvas.addEventListener( 'touchmove', this.OnMouseMove.bind(this), false );
+
+
+  //Initialize control
+  this.renderer.control = new TrackballControls(this.renderer.camera, this.renderer.domElement );
+  this.renderer.control.rotateSpeed = 4.0;
+  this.renderer.control.zoomSpeed = 1.2;
+  this.renderer.control.panSpeed = 0.8;
+  this.renderer.control.noZoom = false;
+  this.renderer.control.noPan = false;
+  this.renderer.control.staticMoving = true;
+  this.renderer.control.dynamicDampingFactor = 0.3;
+  this.renderer.control.keys = [ 65, 83, 68 ];
+  this.renderer.control.addEventListener( 'change', this.Mgr.Redraw.bind(this.Mgr) );
 }
 
 E_Interactor.prototype.OnMouseDown = function()

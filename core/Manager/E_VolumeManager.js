@@ -63,6 +63,8 @@ E_VolumeManager.prototype.ImportVolume = function(buffer)
   })
   .then(function(volume){
     that.AddVolume(volume);
+  })
+  .then(function(){
     that.Mgr.Redraw();
   })
   .catch(function(error){
@@ -72,7 +74,7 @@ E_VolumeManager.prototype.ImportVolume = function(buffer)
 
 E_VolumeManager.prototype.AddVolume = function(volume)
 {
-  var renderer = this.Mgr.GetRenderer(this.Mgr.VIEW_MAIN);
+  var renderer = this.Mgr.GetRenderer();
   volume.AddToRenderer(renderer)
   //renderer.scene.add(volume);
 
@@ -185,6 +187,14 @@ E_VolumeManager.prototype.OnMoveOpacity = function(x, y)
 E_VolumeManager.prototype.OnReleaseOpacity = function()
 {
   this.m_selectedOpacityIndex = -1;
+}
+
+E_VolumeManager.prototype.MoveIndex = function(idx, delta)
+{
+  if(this.m_selectedVolumeIdx == -1) return;
+
+  this.GetSelectedVolume().MoveSliceImage(idx, delta);
+  this.Mgr.Redraw();
 }
 
 module.exports = E_VolumeManager;
