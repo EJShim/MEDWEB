@@ -76,6 +76,7 @@ E_Manager.prototype.Initialize = function()
 
     //Initialize Camera
     if(i == 0){
+
       renderer[i].camera = new THREE.PerspectiveCamera( 45, renWin[i].$width/renWin[i].$height, 0.1, 10000000000 );
     }else{
       renderer[i].camera = new E_OrthographicCamera( renWin[i].$width / -2, renWin[i].$width / 2, renWin[i].$height / 2, renWin[i].$height / -2, 0.1, 100000 );
@@ -83,7 +84,7 @@ E_Manager.prototype.Initialize = function()
 
     renderer[i].camera.position.set(0, 0, -20);
     renderer[i].camera.lookAt(new THREE.Vector3(0, 0, 0));
-    renderer[i].setClearColor(0x00004a);
+
 
     //Attach to the Viewport
     renWin[i].getNode().replaceChild(renderer[i].domElement, renWin[i].$view.childNodes[0] );
@@ -98,6 +99,10 @@ E_Manager.prototype.Initialize = function()
 
   }
 
+  renderer[0].setClearColor(0x0a001a);
+  renderer[1].setClearColor(0x150000);
+  renderer[2].setClearColor(0x001500);
+  renderer[3].setClearColor(0x000015);
   //Initialize Renderer Size
   this.UpdateWindowSize();
 

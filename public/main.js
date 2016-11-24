@@ -40,6 +40,8 @@ elements:[
 ]
 };
 
+var m_histogram = {id:"ID_VIEW_VOLUME_LUT", view:"template"};
+
 
 var chat_module = [
                     { view:"textarea", id:"ID_CHAT_RESULT", scroll:"y", readonly:true},
@@ -52,7 +54,7 @@ var chat_module = [
 
 
 ////MainFrm
-webix.ui({
+var e_layout = new webix.ui({
   rows: [
     {
       view:"toolbar",
@@ -60,7 +62,7 @@ webix.ui({
         {id:"ID_UPLOAD_MESH", view:"uploader",  value:"Import Mesh", upload:"/upload", width:100},
         {id:"ID_UPLOAD_VOLUME", view:"button", value:"Import Dicom", width:100},
         {
-          view:"segmented", id:"ID_SEGMENT_RESIZE", gravity:0.3, options:[
+          view:"segmented", id:"ID_SEGMENT_RESIZE", width:400, options:[
             {id:"ID_BUTTON_VIEW_4VIEW", value:"4 View"},
             {id:"ID_BUTTON_VIEW_1VIEW", value:"1 View"}
           ]
@@ -75,8 +77,7 @@ webix.ui({
           rows:[
             {id:"ID_VIEW_TREE",view:"tree",template:"{common.icon()} {common.checkbox()} {common.folder()} #value#", data:tree_data},//first column,
             {view:"resizer"},
-            propertysheet_1,
-            {id:"ID_VIEW_VOLUME_LUT", view:"template"}
+            propertysheet_1
           ]
         },
         {view:"resizer"},
@@ -103,9 +104,9 @@ webix.ui({
                 id:"ID_VIEW_FOOTER",
                 gravity:0.4,
                 cols:[
-                    {view:"form", elements:chat_module, gravity:2.0},
+                    {view:"form", elements:chat_module, gravity:2.5},
                     {view:"resizer"},
-                    {view:"list", id:"ID_VIEW_LOG", template:"Log Area"}
+                    m_histogram
                 ]
 
               }

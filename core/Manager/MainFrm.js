@@ -37,6 +37,10 @@ $$("ID_VIEW_FOOTER").attachEvent("onViewResize", function(){
   Manager.OnResize();
 });
 
+$$("ID_VIEW_VOLUME_LUT").attachEvent("onViewResize", function(){
+  Manager.OnResize();
+});
+
 $$("ID_SEGMENT_RESIZE").attachEvent("onChange", function(newV, oldV){
 
   //console.log(newV);
@@ -96,8 +100,8 @@ $$("ID_UPLOAD_VOLUME").attachEvent("onItemClick", function(){
   Manager.VolumeMgr().ImportVolume(buffer);
 
   //Remove File Dialog Element
-  parent.removeChild(fileDialog);
   });
+  parent.removeChild(fileDialog);
 });
 
 
@@ -118,11 +122,7 @@ $$("ID_CHAT_INPUT").attachEvent("onKeyPress", function(code, e){
 });
 
 
-
-
 //Histogram
-
-//$$("ID_VIEW_VOLUME_LUT")
 $("#ID_VIEW_LUT").mousedown(function(e){
   Manager.VolumeMgr().OnClickedOpacity(e.offsetX, e.offsetY);
 });

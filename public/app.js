@@ -4,6 +4,7 @@ function E_Histogram()
   this.renderWindow = $$("ID_VIEW_VOLUME_LUT");
   this.domElement = document.createElement('canvas');
   this.domElement.setAttribute("id", "ID_VIEW_LUT");
+  //console.log(this.renderWindow.getNode());
 
 
   this.Initialize();
@@ -842,6 +843,7 @@ E_Manager.prototype.Initialize = function()
 
     //Initialize Camera
     if(i == 0){
+
       renderer[i].camera = new THREE.PerspectiveCamera( 45, renWin[i].$width/renWin[i].$height, 0.1, 10000000000 );
     }else{
       renderer[i].camera = new E_OrthographicCamera( renWin[i].$width / -2, renWin[i].$width / 2, renWin[i].$height / 2, renWin[i].$height / -2, 0.1, 100000 );
@@ -849,7 +851,7 @@ E_Manager.prototype.Initialize = function()
 
     renderer[i].camera.position.set(0, 0, -20);
     renderer[i].camera.lookAt(new THREE.Vector3(0, 0, 0));
-    renderer[i].setClearColor(0x00004a);
+
 
     //Attach to the Viewport
     renWin[i].getNode().replaceChild(renderer[i].domElement, renWin[i].$view.childNodes[0] );
@@ -864,6 +866,10 @@ E_Manager.prototype.Initialize = function()
 
   }
 
+  renderer[0].setClearColor(0x0a001a);
+  renderer[1].setClearColor(0x150000);
+  renderer[2].setClearColor(0x001500);
+  renderer[3].setClearColor(0x000015);
   //Initialize Renderer Size
   this.UpdateWindowSize();
 
@@ -1029,7 +1035,6 @@ function E_MeshManager(Mgr)
 
 E_MeshManager.prototype.InitMeshList = function(list)
 {
-  console.log(list);
   for(var i in list){
     this.ImportMesh("./workingdata/" + list[i], list[i]);
   }
@@ -1488,6 +1493,10 @@ $$("ID_VIEW_FOOTER").attachEvent("onViewResize", function(){
   Manager.OnResize();
 });
 
+$$("ID_VIEW_VOLUME_LUT").attachEvent("onViewResize", function(){
+  Manager.OnResize();
+});
+
 $$("ID_SEGMENT_RESIZE").attachEvent("onChange", function(newV, oldV){
 
   //console.log(newV);
@@ -1547,8 +1556,8 @@ $$("ID_UPLOAD_VOLUME").attachEvent("onItemClick", function(){
   Manager.VolumeMgr().ImportVolume(buffer);
 
   //Remove File Dialog Element
-  parent.removeChild(fileDialog);
   });
+  parent.removeChild(fileDialog);
 });
 
 
@@ -1569,11 +1578,7 @@ $$("ID_CHAT_INPUT").attachEvent("onKeyPress", function(code, e){
 });
 
 
-
-
 //Histogram
-
-//$$("ID_VIEW_VOLUME_LUT")
 $("#ID_VIEW_LUT").mousedown(function(e){
   Manager.VolumeMgr().OnClickedOpacity(e.offsetX, e.offsetY);
 });

@@ -3,6 +3,7 @@ function E_Histogram()
   this.renderWindow = $$("ID_VIEW_VOLUME_LUT");
   this.domElement = document.createElement('canvas');
   this.domElement.setAttribute("id", "ID_VIEW_LUT");
+  //console.log(this.renderWindow.getNode());
 
 
   this.Initialize();

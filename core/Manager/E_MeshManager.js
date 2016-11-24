@@ -10,7 +10,6 @@ function E_MeshManager(Mgr)
 
 E_MeshManager.prototype.InitMeshList = function(list)
 {
-  console.log(list);
   for(var i in list){
     this.ImportMesh("./workingdata/" + list[i], list[i]);
   }
