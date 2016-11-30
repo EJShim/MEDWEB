@@ -2,6 +2,7 @@ var AMI = require("ami.js");
 var E_SliceImage = AMI.default.Helpers.Stack;
 var E_Lut = AMI.default.Helpers.Lut;
 var E_VolumeActor = AMI.default.Helpers.VolumeRendering;
+var glslify = require("glslify");
 
 function E_VolumeS(stack)
 {
@@ -133,11 +134,16 @@ E_VolumeS.prototype.Initialize = function()
   sliceImages2D[2].border.color = 0x0000F4;
   sliceImages2D[2].bbox.visible = false;
 
-  console.log(sliceImages3D[0]);
-  console.log(sliceImages3D[1]);
 
   //Add actor && Initialize Informations
   this.actor = new E_VolumeActor( volumeData );
+
+  //this.actor._material.vertexShader = glslify.file("../GLSL/Volume_FirstPass.vert");
+  this.actor._material.fragmentShader = glslify.file("../GLSL/Volume_SinglePass2.frag");;
+
+  //console.log(this.actor._material.vertexShader);
+  //console.log(this.actor._material.fragmentShader);
+
   this.actor.uniforms.uLut.value = 1
   this.actor.uniforms.uAlphaCorrection.value = 1.0;
   this.actor.uniforms.uWindowCenterWidth.value = [volumeData.windowCenter, volumeData.windowWidth];
