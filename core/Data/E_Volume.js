@@ -244,8 +244,6 @@ E_Volume.prototype.UpdateLUT = function()
 E_Volume.prototype.AddToRenderer = function(renderer)
 {
   renderer.scene.add(this.actor);
-  var slice = this.GetSliceImage();
-  renderer.scene.add(slice[0]);
 }
 
 E_Volume.prototype.firstPassUniforms = function()

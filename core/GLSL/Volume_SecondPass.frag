@@ -786,7 +786,7 @@ void main(void) {
 
     // get texture coordinates of current pixel
     // doesn't need that in theory
-    vec3 currentPosition2 = transformPoint(currentPosition, uAmplitude, uFrequence);
+    vec3 currentPosition2 = currentPosition//transformPoint(currentPosition, uAmplitude, uFrequence);
     vec4 currentPos4 = vec4(currentPosition2, 1.0);
 
     vec4 dataCoordinatesRaw = uWorldToData * currentPos4;

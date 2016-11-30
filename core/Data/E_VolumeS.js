@@ -139,7 +139,7 @@ E_VolumeS.prototype.Initialize = function()
   this.actor = new E_VolumeActor( volumeData );
 
   //this.actor._material.vertexShader = glslify.file("../GLSL/Volume_FirstPass.vert");
-  this.actor._material.fragmentShader = glslify.file("../GLSL/Volume_SinglePass2.frag");;
+  this.actor._material.fragmentShader = glslify.file("../GLSL/Volume_SinglePass.frag");;
 
   //console.log(this.actor._material.vertexShader);
   //console.log(this.actor._material.fragmentShader);
