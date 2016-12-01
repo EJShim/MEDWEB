@@ -7,9 +7,6 @@ var E_Interactor2D = require("./E_Interactor2D.js");
 //Double Pass Rendering
 var E_Volume = require("../Data/E_Volume.js");
 
-var AMI = require("ami.js");
-var E_OrthographicCamera = AMI.default.Cameras.Orthographic;
-
 
 function E_Manager()
 {
@@ -79,10 +76,9 @@ E_Manager.prototype.Initialize = function()
 
     //Initialize Camera
     if(i == 0){
-
       renderer[i].camera = new THREE.PerspectiveCamera( 45, renWin[i].$width/renWin[i].$height, 0.1, 10000000000 );
     }else{
-      renderer[i].camera = new E_OrthographicCamera( renWin[i].$width / -2, renWin[i].$width / 2, renWin[i].$height / 2, renWin[i].$height / -2, 0.1, 100000 );
+      renderer[i].camera = new THREE.OrthographicCamera( renWin[i].$width / -2, renWin[i].$width / 2, renWin[i].$height / 2, renWin[i].$height / -2, 0.1, 100000 );
     }
 
     renderer[i].camera.position.set(0, 0, -20);
@@ -116,9 +112,8 @@ E_Manager.prototype.Initialize = function()
 E_Manager.prototype.Animate = function()
 {
   //Update Main View TrackballControls;
-  for(var i=0 ; i<4 ; i++){
-    this.GetRenderer(i).control.update();
-  }
+  this.GetRenderer(0).control.update();
+
 
   requestAnimationFrame( this.Animate.bind(this) );
 }
@@ -219,8 +214,9 @@ E_Manager.prototype.UpdateWindowSize = function()
     renderer[i].camera.aspect = renWin[i].$width/renWin[i].$height;
     renderer[i].camera.updateProjectionMatrix();
 
-    renderer[i].control.handleResize();
-
+    if(i === 0){
+      renderer[i].control.handleResize();
+    }
   }
 
   //Update Histogram canvas

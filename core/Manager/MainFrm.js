@@ -124,13 +124,24 @@ $$("ID_CHAT_INPUT").attachEvent("onKeyPress", function(code, e){
 
 //Histogram
 $("#ID_VIEW_LUT").mousedown(function(e){
+  e.preventDefault();
   Manager.VolumeMgr().OnClickedOpacity(e.offsetX, e.offsetY);
 });
 
 $(document).mousemove(function(e){
-  Manager.VolumeMgr().OnMoveOpacity(e.offsetX, e.offsetY);
+
+  if(Manager.VolumeMgr().m_selectedOpacityIndex!= -1){
+    e.preventDefault();
+    var hist = document.getElementById("ID_VIEW_LUT");
+
+    var offX = e.clientX - hist.offsetLeft;
+    var offY = e.clientY - hist.offsetTop;
+    Manager.VolumeMgr().OnMoveOpacity(offX, offY);
+  }
+
 });
 
 $(document).mouseup(function(e){
+  e.preventDefault();
   Manager.VolumeMgr().OnReleaseOpacity();
 });

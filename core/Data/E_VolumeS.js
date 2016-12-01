@@ -209,10 +209,13 @@ E_VolumeS.prototype.AddToRenderer = function(renderers)
   }
 
 
-  //Reset Camera
-  renderers[1].camera.init(volumeData.xCosine, volumeData.yCosine, volumeData.zCosine, renderers[1].control, bbox, renderers[1].domElement);
-  renderers[2].camera.init(volumeData.zCosine, volumeData.xCosine, volumeData.yCosine, renderers[2].control, bbox, renderers[2].domElement);
-  renderers[3].camera.init(volumeData.yCosine, volumeData.zCosine, volumeData.xCosine, renderers[3].control, bbox, renderers[3].domElement);
+  // //Reset 2D Camera
+  renderers[1].interactor.Init2DView(volumeData.xCosine, volumeData.yCosine, volumeData.zCosine, bbox);
+  renderers[2].interactor.Init2DView(volumeData.zCosine, volumeData.xCosine, volumeData.yCosine, bbox);
+  renderers[3].interactor.Init2DView(volumeData.yCosine, volumeData.zCosine, volumeData.xCosine, bbox);
+  // renderers[1].camera.init(volumeData.xCosine, volumeData.yCosine, volumeData.zCosine, renderers[1].control, bbox, renderers[1].domElement);
+  // renderers[2].camera.init(volumeData.zCosine, volumeData.xCosine, volumeData.yCosine, renderers[2].control, bbox, renderers[2].domElement);
+  // renderers[3].camera.init(volumeData.yCosine, volumeData.zCosine, volumeData.xCosine, renderers[3].control, bbox, renderers[3].domElement);
 }
 
 

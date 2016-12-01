@@ -622,10 +622,13 @@ E_VolumeS.prototype.AddToRenderer = function(renderers)
   }
 
 
-  //Reset Camera
-  renderers[1].camera.init(volumeData.xCosine, volumeData.yCosine, volumeData.zCosine, renderers[1].control, bbox, renderers[1].domElement);
-  renderers[2].camera.init(volumeData.zCosine, volumeData.xCosine, volumeData.yCosine, renderers[2].control, bbox, renderers[2].domElement);
-  renderers[3].camera.init(volumeData.yCosine, volumeData.zCosine, volumeData.xCosine, renderers[3].control, bbox, renderers[3].domElement);
+  // //Reset 2D Camera
+  renderers[1].interactor.Init2DView(volumeData.xCosine, volumeData.yCosine, volumeData.zCosine, bbox);
+  renderers[2].interactor.Init2DView(volumeData.zCosine, volumeData.xCosine, volumeData.yCosine, bbox);
+  renderers[3].interactor.Init2DView(volumeData.yCosine, volumeData.zCosine, volumeData.xCosine, bbox);
+  // renderers[1].camera.init(volumeData.xCosine, volumeData.yCosine, volumeData.zCosine, renderers[1].control, bbox, renderers[1].domElement);
+  // renderers[2].camera.init(volumeData.zCosine, volumeData.xCosine, volumeData.yCosine, renderers[2].control, bbox, renderers[2].domElement);
+  // renderers[3].camera.init(volumeData.yCosine, volumeData.zCosine, volumeData.xCosine, renderers[3].control, bbox, renderers[3].domElement);
 }
 
 
@@ -699,8 +702,7 @@ E_Interactor.prototype.OnMouseWheel = function()
 module.exports = E_Interactor;
 
 },{"three-trackballcontrols":154}],5:[function(require,module,exports){
-var AMI = require("ami.js");
-var E_OrthographicControl  = AMI.default.Controls.TrackballOrtho;
+
 
 function E_Interactor2D(Mgr, idx, renderer)
 {
@@ -718,7 +720,7 @@ E_Interactor2D.prototype.Initialize = function()
   //Add Event Listner
   var canvas = this.renderer.domElement;
 
-  canvas.addEventListener('mousewheel', this.OnMouseWheel.bind(this), false);
+  canvas.addEventListener('mousewheel', this.OnMouseWheel.bind(this), {passive:true});
   canvas.addEventListener('mousedown', this.OnMouseDown.bind(this), false );
   canvas.addEventListener('mouseup', this.OnMouseUp.bind(this), false );
   canvas.addEventListener('mousemove', this.OnMouseMove.bind(this), false );
@@ -727,10 +729,6 @@ E_Interactor2D.prototype.Initialize = function()
   canvas.addEventListener( 'touchstart', this.OnMouseDown.bind(this), false );
   canvas.addEventListener( 'touchend', this.OnMouseUp.bind(this), false );
   canvas.addEventListener( 'touchmove', this.OnMouseMove.bind(this), false );
-
-  this.renderer.control = new E_OrthographicControl(this.renderer.camera, this.renderer.domElement );
-  this.renderer.control.staticMoving = true;
-  this.renderer.control.noRotate = true;
 }
 
 E_Interactor2D.prototype.OnMouseDown = function()
@@ -749,10 +747,11 @@ E_Interactor2D.prototype.OnMouseUp = function()
 }
 
 
-E_Interactor2D.prototype.OnMouseMove = function()
+E_Interactor2D.prototype.OnMouseMove = function(e)
 {
   if(this.m_bMouseDown){
-
+    //e.preventDefault();
+    //console.log(e);
   }
 
   this.Mgr.Redraw();
@@ -760,15 +759,30 @@ E_Interactor2D.prototype.OnMouseMove = function()
 
 E_Interactor2D.prototype.OnMouseWheel = function(e)
 {
-  //console.log(e.wheelDelta);
+
   this.Mgr.VolumeMgr().MoveIndex(this.idx, e.wheelDelta);
 
   this.Mgr.Redraw();
 }
 
+
+E_Interactor2D.prototype.Init2DView = function(xCos, yCos, zCos, bBox)
+{
+  var camera = this.renderer.camera;
+
+  var camPos = bBox.center.clone().add( xCos.clone().normalize() );
+  console.log(bBox.center);
+  console.log(bBox.center.clone().add( xCos.clone().normalize() ));
+  console.log(bBox.center.clone().add( yCos.clone().normalize() ));
+  camera.position.set(camPos.x, camPos.y, camPos.z);
+  camera.lookAt(bBox.center.x, bBox.center.y, bBox.center.z);
+}
+
+
+
 module.exports = E_Interactor2D;
 
-},{"ami.js":14}],6:[function(require,module,exports){
+},{}],6:[function(require,module,exports){
 var E_MeshManager = require("./E_MeshManager.js");
 var E_VolumeManager = require("./E_VolumeManager.js");
 var E_SocketManager = require("./E_SocketManager.js");
@@ -777,9 +791,6 @@ var E_Interactor2D = require("./E_Interactor2D.js");
 
 //Double Pass Rendering
 var E_Volume = require("../Data/E_Volume.js");
-
-var AMI = require("ami.js");
-var E_OrthographicCamera = AMI.default.Cameras.Orthographic;
 
 
 function E_Manager()
@@ -850,10 +861,9 @@ E_Manager.prototype.Initialize = function()
 
     //Initialize Camera
     if(i == 0){
-
       renderer[i].camera = new THREE.PerspectiveCamera( 45, renWin[i].$width/renWin[i].$height, 0.1, 10000000000 );
     }else{
-      renderer[i].camera = new E_OrthographicCamera( renWin[i].$width / -2, renWin[i].$width / 2, renWin[i].$height / 2, renWin[i].$height / -2, 0.1, 100000 );
+      renderer[i].camera = new THREE.OrthographicCamera( renWin[i].$width / -2, renWin[i].$width / 2, renWin[i].$height / 2, renWin[i].$height / -2, 0.1, 100000 );
     }
 
     renderer[i].camera.position.set(0, 0, -20);
@@ -887,9 +897,8 @@ E_Manager.prototype.Initialize = function()
 E_Manager.prototype.Animate = function()
 {
   //Update Main View TrackballControls;
-  for(var i=0 ; i<4 ; i++){
-    this.GetRenderer(i).control.update();
-  }
+  this.GetRenderer(0).control.update();
+
 
   requestAnimationFrame( this.Animate.bind(this) );
 }
@@ -990,8 +999,9 @@ E_Manager.prototype.UpdateWindowSize = function()
     renderer[i].camera.aspect = renWin[i].$width/renWin[i].$height;
     renderer[i].camera.updateProjectionMatrix();
 
-    renderer[i].control.handleResize();
-
+    if(i === 0){
+      renderer[i].control.handleResize();
+    }
   }
 
   //Update Histogram canvas
@@ -1030,7 +1040,7 @@ E_Manager.prototype.UploadScene = function()
 
 module.exports = E_Manager;
 
-},{"../Data/E_Volume.js":2,"./E_Interactor.js":4,"./E_Interactor2D.js":5,"./E_MeshManager.js":7,"./E_SocketManager.js":8,"./E_VolumeManager.js":9,"ami.js":14}],7:[function(require,module,exports){
+},{"../Data/E_Volume.js":2,"./E_Interactor.js":4,"./E_Interactor2D.js":5,"./E_MeshManager.js":7,"./E_SocketManager.js":8,"./E_VolumeManager.js":9}],7:[function(require,module,exports){
 var STLLoader = require('three-stl-loader')(THREE);
 
 function E_MeshManager(Mgr)
@@ -1455,8 +1465,9 @@ E_VolumeManager.prototype.MoveIndex = function(idx, delta)
 {
   if(this.m_selectedVolumeIdx == -1) return;
 
-  this.GetSelectedVolume().MoveSliceImage(idx, delta);
-  this.Mgr.Redraw();
+
+ this.GetSelectedVolume().MoveSliceImage(idx, delta);
+
 }
 
 module.exports = E_VolumeManager;
@@ -1588,14 +1599,25 @@ $$("ID_CHAT_INPUT").attachEvent("onKeyPress", function(code, e){
 
 //Histogram
 $("#ID_VIEW_LUT").mousedown(function(e){
+  e.preventDefault();
   Manager.VolumeMgr().OnClickedOpacity(e.offsetX, e.offsetY);
 });
 
 $(document).mousemove(function(e){
-  Manager.VolumeMgr().OnMoveOpacity(e.offsetX, e.offsetY);
+
+  if(Manager.VolumeMgr().m_selectedOpacityIndex!= -1){
+    e.preventDefault();
+    var hist = document.getElementById("ID_VIEW_LUT");
+
+    var offX = e.clientX - hist.offsetLeft;
+    var offY = e.clientY - hist.offsetTop;
+    Manager.VolumeMgr().OnMoveOpacity(offX, offY);
+  }
+
 });
 
 $(document).mouseup(function(e){
+  e.preventDefault();
   Manager.VolumeMgr().OnReleaseOpacity();
 });
 

@@ -193,8 +193,9 @@ E_VolumeManager.prototype.MoveIndex = function(idx, delta)
 {
   if(this.m_selectedVolumeIdx == -1) return;
 
-  this.GetSelectedVolume().MoveSliceImage(idx, delta);
-  this.Mgr.Redraw();
+
+ this.GetSelectedVolume().MoveSliceImage(idx, delta);
+
 }
 
 module.exports = E_VolumeManager;

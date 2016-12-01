@@ -1,5 +1,4 @@
-var AMI = require("ami.js");
-var E_OrthographicControl  = AMI.default.Controls.TrackballOrtho;
+
 
 function E_Interactor2D(Mgr, idx, renderer)
 {
@@ -17,7 +16,7 @@ E_Interactor2D.prototype.Initialize = function()
   //Add Event Listner
   var canvas = this.renderer.domElement;
 
-  canvas.addEventListener('mousewheel', this.OnMouseWheel.bind(this), false);
+  canvas.addEventListener('mousewheel', this.OnMouseWheel.bind(this), {passive:true});
   canvas.addEventListener('mousedown', this.OnMouseDown.bind(this), false );
   canvas.addEventListener('mouseup', this.OnMouseUp.bind(this), false );
   canvas.addEventListener('mousemove', this.OnMouseMove.bind(this), false );
@@ -26,10 +25,6 @@ E_Interactor2D.prototype.Initialize = function()
   canvas.addEventListener( 'touchstart', this.OnMouseDown.bind(this), false );
   canvas.addEventListener( 'touchend', this.OnMouseUp.bind(this), false );
   canvas.addEventListener( 'touchmove', this.OnMouseMove.bind(this), false );
-
-  this.renderer.control = new E_OrthographicControl(this.renderer.camera, this.renderer.domElement );
-  this.renderer.control.staticMoving = true;
-  this.renderer.control.noRotate = true;
 }
 
 E_Interactor2D.prototype.OnMouseDown = function()
@@ -48,10 +43,11 @@ E_Interactor2D.prototype.OnMouseUp = function()
 }
 
 
-E_Interactor2D.prototype.OnMouseMove = function()
+E_Interactor2D.prototype.OnMouseMove = function(e)
 {
   if(this.m_bMouseDown){
-
+    //e.preventDefault();
+    //console.log(e);
   }
 
   this.Mgr.Redraw();
@@ -59,10 +55,25 @@ E_Interactor2D.prototype.OnMouseMove = function()
 
 E_Interactor2D.prototype.OnMouseWheel = function(e)
 {
-  //console.log(e.wheelDelta);
+
   this.Mgr.VolumeMgr().MoveIndex(this.idx, e.wheelDelta);
 
   this.Mgr.Redraw();
 }
+
+
+E_Interactor2D.prototype.Init2DView = function(xCos, yCos, zCos, bBox)
+{
+  var camera = this.renderer.camera;
+
+  var camPos = bBox.center.clone().add( xCos.clone().normalize() );
+  console.log(bBox.center);
+  console.log(bBox.center.clone().add( xCos.clone().normalize() ));
+  console.log(bBox.center.clone().add( yCos.clone().normalize() ));
+  camera.position.set(camPos.x, camPos.y, camPos.z);
+  camera.lookAt(bBox.center.x, bBox.center.y, bBox.center.z);
+}
+
+
 
 module.exports = E_Interactor2D;
