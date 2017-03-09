@@ -23,7 +23,7 @@ function ES_Manager(express, app)
   var m_router = new ES_Router(this, app);
   var m_socketManager = new ES_SocketManager(this, server);
   var m_meshManager = new ES_MeshManager(this);
-  this.camera = null
+  this.camera = null;
 
 
 

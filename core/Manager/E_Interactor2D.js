@@ -67,7 +67,7 @@ E_Interactor2D.prototype.Init2DView = function(xCos, yCos, zCos, bBox)
   var camera = this.renderer.camera;
 
   var camPos = bBox.center.clone().add( xCos.clone().normalize() );
-  console.log(bBox.center);
+  console.log(bBox.center); 
   console.log(bBox.center.clone().add( xCos.clone().normalize() ));
   console.log(bBox.center.clone().add( yCos.clone().normalize() ));
   camera.position.set(camPos.x, camPos.y, camPos.z);
